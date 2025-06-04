@@ -1,8 +1,20 @@
 use serde::Deserialize;
 use serde_json::Result;
+use super::Thing;
 
 struct Votes {
     votes: Vec<u64>,
+}
+
+impl Thing for Votes {
+    fn run(&self, payload: &str) -> Result<()> {
+        vote_program(payload).unwrap();
+        Ok(())
+    }
+
+    fn verify(&self) -> Result<bool> {
+        Ok(true)
+    }
 }
 
 impl Votes {
@@ -12,7 +24,7 @@ impl Votes {
     }
 }
 
-pub fn vote_program(payload: &str) -> Result<()> {
+fn vote_program(payload: &str) -> Result<()> {
     #[derive(Debug, Deserialize)]
     struct Ballot {
         candidate: u32,
@@ -31,17 +43,26 @@ pub fn vote_program(payload: &str) -> Result<()> {
 mod test {
     use super::*;
 
-    fn setup() -> String {
-        r#"
+    fn setup() -> (Votes, String) {
+        let payload = r#"
         {
             "candidate": 0
         }"#
-        .into()
+        .into();
+        let number_of_candidates = 3;
+        let votes = Votes::new(number_of_candidates);
+        (votes, payload)
     }
 
     #[test]
     fn test_vote_program() {
-        let payload = setup();
+        let (_, payload) = setup();
         let _res = vote_program(&payload).unwrap();
+    }
+
+    #[test]
+    fn test_run() {
+        let (vote, payload) = setup();
+        let _res = vote.run(&payload).unwrap();
     }
 }

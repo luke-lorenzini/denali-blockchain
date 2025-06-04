@@ -1,15 +1,28 @@
+use std::collections::HashMap;
+
 use rust_decimal::{Decimal, dec};
 use serde::Deserialize;
 use serde_json::Result;
-use std::collections::HashMap;
+use super::Thing;
 
 #[derive(Debug)]
-pub struct Bank {
+struct Bank {
     accounts: HashMap<u32, Account>,
 }
 
+impl Thing for Bank {
+    fn run(&self, payload: &str) -> Result<()> {
+        bank_program(payload)?;
+        Ok(())
+    }
+
+    fn verify(&self) -> Result<bool> {
+        Ok(true)
+    }
+}
+
 impl Bank {
-    pub fn new(accounts: Vec<Account>) -> Self {
+    fn new(accounts: Vec<Account>) -> Self {
         let mut local_accounts = HashMap::new();
 
         for (account_number, account) in accounts.into_iter().enumerate() {
@@ -23,19 +36,19 @@ impl Bank {
 }
 
 #[derive(Debug)]
-pub struct Account {
+struct Account {
     #[allow(dead_code)]
     name: String,
     balance: Decimal,
 }
 
 impl Account {
-    pub fn new(name: String, balance: Decimal) -> Self {
+    fn new(name: String, balance: Decimal) -> Self {
         Self { name, balance }
     }
 }
 
-pub fn bank_program(payload: &str) -> Result<()> {
+fn bank_program(payload: &str) -> Result<()> {
     #[derive(Debug, Deserialize)]
     struct BankTransfer {
         payer: u32,
@@ -69,19 +82,30 @@ pub fn bank_program(payload: &str) -> Result<()> {
 mod test {
     use super::*;
 
-    fn setup() -> String {
-        r#"
+    fn setup() -> (Bank, String) {
+        let payload = r#"
         {
             "payer": 0,
             "payee": 1,
             "amount": 213.7
         }"#
-        .into()
+        .into();
+        let account1 = Account::new("user1".into(), dec!(400));
+        let account2 = Account::new("user2".into(), Decimal::ZERO);
+        let accounts = vec![account1, account2];
+        let bank = Bank::new(accounts);
+        (bank, payload)
     }
 
     #[test]
     fn test_bank_program() {
-        let payload = setup();
+        let (_, payload) = setup();
         let _res = bank_program(&payload).unwrap();
+    }
+
+    #[test]
+    fn test_run() {
+        let (bank, payload) = setup();
+        let _res = bank.run(&payload).unwrap();
     }
 }
