@@ -1,6 +1,6 @@
+use super::Thing;
 use serde::Deserialize;
 use serde_json::Result;
-use super::Thing;
 
 struct Votes {
     votes: Vec<u64>,

@@ -1,9 +1,9 @@
 use std::collections::HashMap;
 
+use super::Thing;
 use rust_decimal::{Decimal, dec};
 use serde::Deserialize;
 use serde_json::Result;
-use super::Thing;
 
 #[derive(Debug)]
 struct Bank {

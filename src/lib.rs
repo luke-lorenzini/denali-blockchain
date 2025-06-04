@@ -1,7 +1,6 @@
 use serde_json::Result;
 
 mod bank;
-pub mod transfer;
 mod vote;
 
 pub trait Thing {
