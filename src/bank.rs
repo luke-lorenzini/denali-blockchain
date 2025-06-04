@@ -1,3 +1,4 @@
+use rust_decimal::{Decimal, dec};
 use serde::Deserialize;
 use serde_json::Result;
 use std::collections::HashMap;
@@ -25,11 +26,11 @@ impl Bank {
 pub struct Account {
     #[allow(dead_code)]
     name: String,
-    balance: f64,
+    balance: Decimal,
 }
 
 impl Account {
-    pub fn new(name: String, balance: f64) -> Self {
+    pub fn new(name: String, balance: Decimal) -> Self {
         Self { name, balance }
     }
 }
@@ -39,14 +40,14 @@ pub fn bank_program(payload: &str) -> Result<()> {
     struct BankTransfer {
         payer: u32,
         payee: u32,
-        amount: f64,
+        amount: Decimal,
     }
 
     let payload: BankTransfer = serde_json::from_str(payload)?;
     println!("payload: {payload:?}");
 
-    let account1 = Account::new("user1".into(), 400.);
-    let account2 = Account::new("user2".into(), f64::default());
+    let account1 = Account::new("user1".into(), dec!(400));
+    let account2 = Account::new("user2".into(), Decimal::ZERO);
     let accounts = vec![account1, account2];
     let bank = Bank::new(accounts);
     println!("bank: {bank:?}");
