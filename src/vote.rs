@@ -1,8 +1,8 @@
-use super::Thing;
+use crate::Thing;
 use serde::Deserialize;
 use serde_json::Result;
 
-struct Votes {
+pub struct Votes {
     votes: Vec<u64>,
 }
 
@@ -18,7 +18,7 @@ impl Thing for Votes {
 }
 
 impl Votes {
-    fn new(number_of_candidates: u32) -> Self {
+    pub fn new(number_of_candidates: u32) -> Self {
         let votes = vec![0; number_of_candidates as usize];
         Self { votes }
     }

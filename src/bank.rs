@@ -1,12 +1,12 @@
 use std::collections::HashMap;
 
-use super::Thing;
+use crate::Thing;
 use rust_decimal::{Decimal, dec};
 use serde::Deserialize;
 use serde_json::Result;
 
 #[derive(Debug)]
-struct Bank {
+pub struct Bank {
     accounts: HashMap<u32, Account>,
 }
 
