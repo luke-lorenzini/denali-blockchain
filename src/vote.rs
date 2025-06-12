@@ -1,4 +1,6 @@
 use crate::Thing;
+
+use log::debug;
 use serde::Deserialize;
 use serde_json::Result;
 
@@ -31,7 +33,7 @@ fn vote_program(payload: &str) -> Result<()> {
     }
 
     let payload: Ballot = serde_json::from_str(payload)?;
-    println!("payload: {payload:?}");
+    debug!("payload: {payload:?}");
 
     let mut votes = Votes::new(3);
     votes.votes[payload.candidate as usize] += 1;
