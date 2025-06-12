@@ -1,10 +1,10 @@
 const VERSION: u32 = 0;
-pub (crate) const TRANSACTIONS_PER_BLOCK: u32 = 10;
+pub const TRANSACTIONS_PER_BLOCK: u32 = 10;
 
-pub (crate) struct Header {
-    version: u32,
-    previous_block_hash: String,
-    pub (crate) merkle_tree_root: String,
+pub struct Header {
+    _version: u32,
+    _previous_block_hash: String,
+    pub merkle_tree_root: String,
     _timestamp: u64,
     _difficulty: u32,
     _nonce: u32,
@@ -13,8 +13,8 @@ pub (crate) struct Header {
 impl Header {
     fn new(previous_block_hash: String, merkle_tree_root: String) -> Self {
         Self {
-            version: VERSION,
-            previous_block_hash,
+            _version: VERSION,
+            _previous_block_hash: previous_block_hash,
             merkle_tree_root,
             _timestamp: u64::default(),
             _difficulty: u32::default(),
@@ -24,8 +24,8 @@ impl Header {
 
     fn genesis() -> Self {
         Self {
-            version: VERSION,
-            previous_block_hash: String:: default(),
+            _version: VERSION,
+            _previous_block_hash: String:: default(),
             merkle_tree_root: String::default(),
             _timestamp: u64::default(),
             _difficulty: u32::default(),
@@ -39,8 +39,8 @@ impl Header {
 }
 
 pub struct Block {
-    pub (crate) header: Header,
-    pub (crate) transaction_count: u32,
+    pub header: Header,
+    pub transaction_count: u32,
     _transactions: u32,
 }
 
@@ -61,7 +61,13 @@ impl Block {
 
 pub struct Chain {
     blocks: Vec<Block>,
-    pub (crate) count: u32,
+    pub count: u32,
+}
+
+impl Default for Chain {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl Chain {
@@ -86,20 +92,16 @@ impl Chain {
 mod test {
     use super::*;
 
-    fn create_transaction_pool() -> Vec<i32> {
-        vec![0; 100]
-    }
-
     #[test]
     fn test_new_header() {
         let header = Header::new("0".into(), "".into());
-        assert_eq!(header.version, 0);
+        assert_eq!(header._version, 0);
     }
 
     #[test]
     fn test_new_genesis_header() {
         let header = Header::genesis();
-        assert_eq!(header.previous_block_hash, String::default());
+        assert_eq!(header._previous_block_hash, String::default());
         assert_eq!(header.merkle_tree_root, String::default());
     }
 
