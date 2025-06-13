@@ -1,8 +1,11 @@
 use hex::encode;
-use sha2::{Digest, Sha256};
 use serde_json::Result;
+use sha2::{Digest, Sha256};
 
-use crate::{chain::Block, types::{H256, Thing}};
+use crate::{
+    chain::Block,
+    types::{H256, Thing},
+};
 
 pub mod chain;
 pub mod types;

@@ -25,7 +25,7 @@ impl Header {
     fn genesis() -> Self {
         Self {
             _version: VERSION,
-            _previous_block_hash: String:: default(),
+            _previous_block_hash: String::default(),
             merkle_tree_root: String::default(),
             _timestamp: u64::default(),
             _difficulty: u32::default(),
@@ -47,14 +47,18 @@ pub struct Block {
 impl Block {
     pub fn new(previous_block_hash: String, merkle_tree_root: String) -> Self {
         let header = Header::new(previous_block_hash, merkle_tree_root);
-        Self { header, transaction_count: TRANSACTIONS_PER_BLOCK, _transactions: u32::default() }
+        Self {
+            header,
+            transaction_count: TRANSACTIONS_PER_BLOCK,
+            _transactions: u32::default(),
+        }
     }
 
     fn genesis() -> Self {
         Self {
             header: Header::genesis(),
             transaction_count: u32::default(),
-            _transactions: u32::default()
+            _transactions: u32::default(),
         }
     }
 }

@@ -1,7 +1,7 @@
+use denali::types::Thing;
 use log::debug;
 use serde::Deserialize;
 use serde_json::Result;
-use denali::types::Thing;
 
 pub struct Votes {
     votes: Vec<u64>,
