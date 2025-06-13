@@ -1,6 +1,7 @@
 [workspace]
 resolver = "3"
-members = ["contracts", "denali"]
+# members = ["contracts/bank", "contracts/vote", "denali"]
+members = ["denali"]
 
 [workspace.dependencies]
 derive_more = { version = "2.0.1", features = ["as_ref"] }
