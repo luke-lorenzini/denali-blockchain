@@ -6,8 +6,6 @@ use serde_json::Result;
 use crate::chain::Block;
 
 pub mod chain;
-mod bank;
-pub mod vote;
 
 #[derive(AsRef, Default)]
 pub struct H256([u8; 32]);

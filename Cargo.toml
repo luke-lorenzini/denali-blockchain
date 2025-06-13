@@ -1,9 +1,8 @@
-[package]
-name = "denali"
-version = "0.1.0"
-edition = "2024"
+[workspace]
+resolver = "3"
+members = ["contracts", "denali"]
 
-[dependencies]
+[workspace.dependencies]
 derive_more = { version = "2.0.1", features = ["as_ref"] }
 hex = "0.4.3"
 log = "0.4.27"

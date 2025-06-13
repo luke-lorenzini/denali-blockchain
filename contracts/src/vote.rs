@@ -1,8 +1,7 @@
-use crate::Thing;
-
 use log::debug;
 use serde::Deserialize;
 use serde_json::Result;
+use denali::Thing;
 
 pub struct Votes {
     votes: Vec<u64>,
