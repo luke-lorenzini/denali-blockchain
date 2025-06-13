@@ -10,13 +10,14 @@ use crate::{
 pub mod chain;
 pub mod types;
 
+#[derive(Clone)]
 pub struct Message<T> {
     pub program: T,
     pub payload: String,
 }
 
 // pub fn parse<T: Thing>(program: T, payload: &str) -> Result<H256> {
-pub fn parse<T: Thing>(message: Message<T>) -> Result<H256> {
+fn parse<T: Thing>(message: Message<T>) -> Result<H256> {
     if message.program.verify()? {
         message.program.run(&message.payload)?;
     }

@@ -1,6 +1,7 @@
 const VERSION: u32 = 0;
 pub const TRANSACTIONS_PER_BLOCK: u32 = 10;
 
+#[derive(Debug)]
 pub struct Header {
     _version: u32,
     _previous_block_hash: String,
@@ -38,6 +39,7 @@ impl Header {
     }
 }
 
+#[derive(Debug)]
 pub struct Block {
     pub header: Header,
     pub transaction_count: u32,
@@ -63,6 +65,7 @@ impl Block {
     }
 }
 
+#[derive(Debug)]
 pub struct Chain {
     blocks: Vec<Block>,
     pub count: u32,

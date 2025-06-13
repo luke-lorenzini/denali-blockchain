@@ -1,4 +1,4 @@
-use denali::{types::Thing};
+use denali::types::Thing;
 use vote::Votes;
 
 fn main() {
