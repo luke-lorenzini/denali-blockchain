@@ -4,7 +4,7 @@ use rust_decimal::{Decimal, dec};
 use serde::Deserialize;
 use serde_json::Result;
 
-use denali::Thing;
+use denali::types::Thing;
 
 #[derive(Debug)]
 pub struct Bank {

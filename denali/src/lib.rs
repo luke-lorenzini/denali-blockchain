@@ -1,19 +1,11 @@
-use derive_more::AsRef;
 use hex::encode;
 use sha2::{Digest, Sha256};
 use serde_json::Result;
 
-use crate::chain::Block;
+use crate::{chain::Block, types::{H256, Thing}};
 
 pub mod chain;
-
-#[derive(AsRef, Default)]
-pub struct H256([u8; 32]);
-
-pub trait Thing {
-    fn verify(&self) -> Result<bool>;
-    fn run(&self, payload: &str) -> Result<()>;
-}
+pub mod types;
 
 pub struct Message<T> {
     pub program: T,
