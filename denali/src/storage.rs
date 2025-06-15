@@ -15,7 +15,7 @@ impl State {
         self.0.contains_key(&address)
     }
 
-    fn _get_value(&self, key: &str) {
+    pub fn get_value(&self, key: &str) {
         let _value = self.0.get(key);
     }
 

@@ -5,10 +5,10 @@ use denali::{
     // chain::Chain,
     // create_new_block,
     types::Thing,
+    storage::State,
 };
 use tokio::{
-    spawn,
-    time::{Duration, sleep},
+    join, spawn, time::{sleep, Duration}
 };
 
 #[tokio::main]
@@ -41,22 +41,28 @@ async fn main() {
 
     let _res = transactor.create_new_block(transactions);
 
-    let _xxx = spawn(async move {
+    let xxx = spawn(async move {
         println!("other thread");
 
         loop {
-            sleep(Duration::from_millis(100)).await;
+            sleep(Duration::from_millis(1000)).await;
             println!("awoken");
         }
     });
+
+    let _res = join!(xxx);
 }
 
 #[derive(Clone)]
 struct FakeProgram;
 
 impl Thing for FakeProgram {
-    fn run(&self, _payload: &str) -> serde_json::Result<()> {
+    fn run(&self, _payload: &str, state: &State) -> serde_json::Result<()> {
         println!("run");
+
+        state.get_value("test");
+
+        
         Ok(())
     }
 

@@ -8,7 +8,7 @@ use crate::{
 };
 
 mod chain;
-mod storage;
+pub mod storage;
 pub mod types;
 
 #[derive(Clone)]
@@ -28,7 +28,8 @@ impl Transactor {
     }
     fn parse<T: Thing>(&self, message: Message<T>) -> Result<H256> {
         if message.program.verify()? {
-            message.program.run(&message.payload)?;
+            let xxx = &self.chain.state;
+            message.program.run(&message.payload, xxx)?;
         }
         Ok(H256::default())
     }

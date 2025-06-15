@@ -71,7 +71,7 @@ impl Block {
 pub struct Chain {
     blocks: Vec<Block>,
     count: u32,
-    state: State,
+    pub state: State,
 }
 
 impl Default for Chain {
