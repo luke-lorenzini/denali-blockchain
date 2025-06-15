@@ -1,58 +1,60 @@
+use crate::storage::State;
+
 const VERSION: u32 = 0;
-pub const TRANSACTIONS_PER_BLOCK: u32 = 10;
+const TRANSACTIONS_PER_BLOCK: u32 = 10;
 
 #[derive(Debug)]
-pub struct Header {
-    _version: u32,
-    _previous_block_hash: String,
-    pub merkle_tree_root: String,
-    _timestamp: u64,
-    _difficulty: u32,
-    _nonce: u32,
+struct Header {
+    version: u32,
+    previous_block_hash: String,
+    merkle_tree_root: String,
+    timestamp: u64,
+    difficulty: u32,
+    nonce: u32,
 }
 
 impl Header {
     fn new(previous_block_hash: String, merkle_tree_root: String) -> Self {
         Self {
-            _version: VERSION,
-            _previous_block_hash: previous_block_hash,
+            version: VERSION,
+            previous_block_hash: previous_block_hash,
             merkle_tree_root,
-            _timestamp: u64::default(),
-            _difficulty: u32::default(),
-            _nonce: u32::default(),
+            timestamp: u64::default(),
+            difficulty: u32::default(),
+            nonce: u32::default(),
         }
     }
 
     fn genesis() -> Self {
         Self {
-            _version: VERSION,
-            _previous_block_hash: String::default(),
+            version: VERSION,
+            previous_block_hash: String::default(),
             merkle_tree_root: String::default(),
-            _timestamp: u64::default(),
-            _difficulty: u32::default(),
-            _nonce: u32::default(),
+            timestamp: u64::default(),
+            difficulty: u32::default(),
+            nonce: u32::default(),
         }
     }
 
-    fn _calc_hash(&self) -> String {
-        todo!()
+    fn calc_hash(&self) -> String {
+        String::default()
     }
 }
 
 #[derive(Debug)]
-pub struct Block {
-    pub header: Header,
-    pub transaction_count: u32,
-    _transactions: u32,
+struct Block {
+    header: Header,
+    transaction_count: u32,
+    transactions: u32,
 }
 
 impl Block {
-    pub fn new(previous_block_hash: String, merkle_tree_root: String) -> Self {
+    fn new(previous_block_hash: String, merkle_tree_root: String) -> Self {
         let header = Header::new(previous_block_hash, merkle_tree_root);
         Self {
             header,
             transaction_count: TRANSACTIONS_PER_BLOCK,
-            _transactions: u32::default(),
+            transactions: u32::default(),
         }
     }
 
@@ -60,7 +62,7 @@ impl Block {
         Self {
             header: Header::genesis(),
             transaction_count: u32::default(),
-            _transactions: u32::default(),
+            transactions: u32::default(),
         }
     }
 }
@@ -68,7 +70,8 @@ impl Block {
 #[derive(Debug)]
 pub struct Chain {
     blocks: Vec<Block>,
-    pub count: u32,
+    count: u32,
+    state: State,
 }
 
 impl Default for Chain {
@@ -79,19 +82,24 @@ impl Default for Chain {
 
 impl Chain {
     pub fn new() -> Self {
-        // let header = Header::genesis();
-        // let genesis_block = Block::genesis();
         let genesis_block = vec![Block::genesis()];
+        let state = State::new();
         Self {
             count: genesis_block.len() as u32,
             blocks: genesis_block,
+            state,
         }
     }
 
-    pub fn add_next_block(&mut self, block: Block) -> bool {
+    pub fn add_next_block(&mut self, merkle_tree_root: String) -> bool {
+        let block = Block::new(self.get_block_hash(), merkle_tree_root);
         self.blocks.push(block);
         self.count = self.blocks.len() as u32;
         true
+    }
+
+    fn get_block_hash(&self) -> String {
+        String::default()
     }
 }
 
@@ -102,13 +110,13 @@ mod test {
     #[test]
     fn test_new_header() {
         let header = Header::new("0".into(), "".into());
-        assert_eq!(header._version, 0);
+        assert_eq!(header.version, 0);
     }
 
     #[test]
     fn test_new_genesis_header() {
         let header = Header::genesis();
-        assert_eq!(header._previous_block_hash, String::default());
+        assert_eq!(header.previous_block_hash, String::default());
         assert_eq!(header.merkle_tree_root, String::default());
     }
 

@@ -3,11 +3,12 @@ use serde_json::Result;
 use sha2::{Digest, Sha256};
 
 use crate::{
-    chain::Block,
+    chain::Chain,
     types::{H256, Thing},
 };
 
-pub mod chain;
+mod chain;
+mod storage;
 pub mod types;
 
 #[derive(Clone)]
@@ -16,33 +17,43 @@ pub struct Message<T> {
     pub payload: String,
 }
 
-// pub fn parse<T: Thing>(program: T, payload: &str) -> Result<H256> {
-fn parse<T: Thing>(message: Message<T>) -> Result<H256> {
-    if message.program.verify()? {
-        message.program.run(&message.payload)?;
+pub struct Transactor {
+    chain: Chain,
+}
+
+impl Transactor {
+    pub fn new() -> Self {
+        let chain = Chain::new();
+        Transactor { chain }
     }
-    Ok(H256::default())
-}
-
-fn process_transaction<T: Thing>(transaction: Message<T>) -> Result<H256> {
-    parse(transaction)
-    // transaction.to_be_bytes()
-    // res
-}
-
-pub fn process_transactions<T: Thing>(transactions: Vec<Message<T>>) -> String {
-    let mut hasher = Sha256::new();
-    for transaction in transactions {
-        let tx = process_transaction(transaction).unwrap();
-        hasher.update(tx.as_ref());
+    fn parse<T: Thing>(&self, message: Message<T>) -> Result<H256> {
+        if message.program.verify()? {
+            message.program.run(&message.payload)?;
+        }
+        Ok(H256::default())
     }
-    let res = hasher.finalize();
-    let merkle_tree_root = encode(res);
-    println!("{merkle_tree_root:?}");
-    merkle_tree_root
-}
 
-pub fn create_new_block<T: Thing>(previous_block_hash: String, messages: Vec<Message<T>>) -> Block {
-    let merkle_tree_root = process_transactions(messages);
-    Block::new(previous_block_hash, merkle_tree_root)
+    fn process_transaction<T: Thing>(&self, transaction: Message<T>) -> Result<H256> {
+        self.parse(transaction)
+        // transaction.to_be_bytes()
+        // res
+    }
+
+    fn process_transactions<T: Thing>(&self, transactions: Vec<Message<T>>) -> String {
+        let mut hasher = Sha256::new();
+        for transaction in transactions {
+            let tx = self.process_transaction(transaction).unwrap();
+            hasher.update(tx.as_ref());
+        }
+        let res = hasher.finalize();
+        let merkle_tree_root = encode(res);
+        println!("{merkle_tree_root:?}");
+        merkle_tree_root
+    }
+
+    pub fn create_new_block<T: Thing>(&mut self, messages: Vec<Message<T>>) -> bool {
+        let merkle_tree_root = self.process_transactions(messages);
+        self.chain.add_next_block(merkle_tree_root);
+        true
+    }
 }
