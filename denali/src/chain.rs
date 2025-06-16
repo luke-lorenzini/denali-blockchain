@@ -1,3 +1,6 @@
+use hex::encode;
+use sha2::{Digest, Sha256};
+
 use crate::storage::State;
 
 const VERSION: u32 = 0;
@@ -36,8 +39,23 @@ impl Header {
         }
     }
 
+    fn to_bytes(&self) -> Vec<u8> {
+        [
+            &self.version.to_be_bytes()[..],
+            &self.previous_block_hash.as_bytes()[..],
+            &self.merkle_tree_root.as_bytes()[..],
+            &self.timestamp.to_be_bytes()[..],
+            &self.difficulty.to_be_bytes()[..],
+            &self.nonce.to_be_bytes()[..],
+        ].concat()
+    }
+
     fn calc_hash(&self) -> String {
-        String::default()
+        let mut hasher = Sha256::new();
+        hasher.update(self.to_bytes());
+        let res = hasher.finalize();
+        let res = encode(res);
+        res
     }
 }
 
@@ -93,13 +111,14 @@ impl Chain {
 
     pub fn add_next_block(&mut self, merkle_tree_root: String) -> bool {
         let block = Block::new(self.get_block_hash(), merkle_tree_root);
+        println!("block: {block:?}");
         self.blocks.push(block);
         self.count = self.blocks.len() as u32;
         true
     }
 
     fn get_block_hash(&self) -> String {
-        String::default()
+        self.blocks.last().unwrap().header.calc_hash()
     }
 }
 
