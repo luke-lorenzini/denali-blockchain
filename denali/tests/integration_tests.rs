@@ -1,4 +1,6 @@
 // use denali::{Message, vote::Votes, create_new_block, chain::{Chain, TRANSACTIONS_PER_BLOCK}, process_transactions};
+use denali::{storage::State, Message, Transactor, types::Thing};
+use serde::Deserialize;
 
 // fn create_transaction_pool() -> Vec<Message<Votes>> {
 //     let mut messages = Vec::new();
@@ -50,3 +52,53 @@
 //     assert_eq!(res.header.merkle_tree_root, expected);
 //     assert_eq!(res.transaction_count, TRANSACTIONS_PER_BLOCK);
 // }
+
+#[test]
+fn test_modify_single_value() {
+    let mut transactor = Transactor::new();
+    let mut transactions = Vec::new();
+    let fake = FakeProgram;
+    let payload = r#"
+    {
+        "fake": "1"
+    }"#
+    .into();
+    let message = Message {
+        payload,
+        program: fake,
+    };
+    transactions.push(message);
+    let res = transactor.create_new_block(transactions);
+    assert_eq!(res, true)
+}
+
+#[derive(Debug, Deserialize)]
+struct Payload {
+    fake: String
+}
+
+#[derive(Clone)]
+struct FakeProgram;
+
+impl Thing for FakeProgram {
+    fn run(&self, payload: &str, state: &mut State) -> serde_json::Result<()> {
+        println!("run");
+        println!("{payload:?}");
+        println!("{state:?}");
+
+        let xxx: Payload = serde_json::from_slice(payload.as_bytes()).unwrap();
+        println!("{xxx:?}");
+
+        state.set_value("fake_program", &xxx.fake);
+
+        println!("{state:?}");
+
+        
+        Ok(())
+    }
+
+    fn verify(&self) -> serde_json::Result<bool> {
+        println!("verify");
+        Ok(true)
+    }
+}
