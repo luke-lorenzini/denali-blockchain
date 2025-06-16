@@ -1,14 +1,15 @@
 // use denali::{
-    // process_transactions,
-    // Message,
-    // Transactor,
-    // chain::Chain,
-    // create_new_block,
-    // types::Thing,
-    // storage::State,
+// process_transactions,
+// Message,
+// Transactor,
+// chain::Chain,
+// create_new_block,
+// types::Thing,
+// storage::State,
 // };
 use tokio::{
-    join, spawn, time::{sleep, Duration}
+    join, spawn,
+    time::{Duration, sleep},
 };
 
 #[tokio::main]
@@ -62,7 +63,6 @@ async fn main() {
 
 //         state.get_value("test");
 
-        
 //         Ok(())
 //     }
 

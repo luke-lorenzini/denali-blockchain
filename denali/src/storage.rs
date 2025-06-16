@@ -8,7 +8,7 @@ impl State {
         let mut inner = HashMap::new();
         // Write our program address for now
         inner.insert("fake_program".into(), "fake_program".into());
-        State (inner)
+        State(inner)
     }
 
     fn _exists(&self, address: String) -> bool {

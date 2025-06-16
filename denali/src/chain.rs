@@ -47,7 +47,8 @@ impl Header {
             &self.timestamp.to_be_bytes()[..],
             &self.difficulty.to_be_bytes()[..],
             &self.nonce.to_be_bytes()[..],
-        ].concat()
+        ]
+        .concat()
     }
 
     fn calc_hash(&self) -> String {

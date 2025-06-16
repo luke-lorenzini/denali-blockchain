@@ -1,5 +1,5 @@
 // use denali::{Message, vote::Votes, create_new_block, chain::{Chain, TRANSACTIONS_PER_BLOCK}, process_transactions};
-use denali::{storage::State, Message, Transactor, types::Thing};
+use denali::{Message, Transactor, storage::State, types::Thing};
 use serde::Deserialize;
 
 // fn create_transaction_pool() -> Vec<Message<Votes>> {
@@ -74,7 +74,7 @@ fn test_modify_single_value() {
 
 #[derive(Debug, Deserialize)]
 struct Payload {
-    fake: String
+    fake: String,
 }
 
 #[derive(Clone)]
@@ -93,7 +93,6 @@ impl Thing for FakeProgram {
 
         println!("{state:?}");
 
-        
         Ok(())
     }
 
