@@ -20,7 +20,7 @@ impl Header {
     fn new(previous_block_hash: String, merkle_tree_root: String) -> Self {
         Self {
             version: VERSION,
-            previous_block_hash: previous_block_hash,
+            previous_block_hash,
             merkle_tree_root,
             timestamp: u64::default(),
             difficulty: u32::default(),
@@ -42,8 +42,8 @@ impl Header {
     fn to_bytes(&self) -> Vec<u8> {
         [
             &self.version.to_be_bytes()[..],
-            &self.previous_block_hash.as_bytes()[..],
-            &self.merkle_tree_root.as_bytes()[..],
+            self.previous_block_hash.as_bytes(),
+            self.merkle_tree_root.as_bytes(),
             &self.timestamp.to_be_bytes()[..],
             &self.difficulty.to_be_bytes()[..],
             &self.nonce.to_be_bytes()[..],
@@ -55,16 +55,15 @@ impl Header {
         let mut hasher = Sha256::new();
         hasher.update(self.to_bytes());
         let res = hasher.finalize();
-        let res = encode(res);
-        res
+        encode(res)
     }
 }
 
 #[derive(Debug)]
 struct Block {
     header: Header,
-    transaction_count: u32,
-    transactions: u32,
+    _transaction_count: u32,
+    _transactions: u32,
 }
 
 impl Block {
@@ -72,16 +71,16 @@ impl Block {
         let header = Header::new(previous_block_hash, merkle_tree_root);
         Self {
             header,
-            transaction_count: TRANSACTIONS_PER_BLOCK,
-            transactions: u32::default(),
+            _transaction_count: TRANSACTIONS_PER_BLOCK,
+            _transactions: u32::default(),
         }
     }
 
     fn genesis() -> Self {
         Self {
             header: Header::genesis(),
-            transaction_count: u32::default(),
-            transactions: u32::default(),
+            _transaction_count: u32::default(),
+            _transactions: u32::default(),
         }
     }
 }

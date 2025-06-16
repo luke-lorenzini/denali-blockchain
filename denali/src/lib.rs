@@ -21,6 +21,12 @@ pub struct Transactor {
     chain: Chain,
 }
 
+impl Default for Transactor {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl Transactor {
     pub fn new() -> Self {
         let chain = Chain::new();

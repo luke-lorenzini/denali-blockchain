@@ -3,6 +3,12 @@ use std::{collections::HashMap, str::FromStr};
 #[derive(Clone, Debug)]
 pub struct State(HashMap<String, String>);
 
+impl Default for State {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl State {
     pub fn new() -> Self {
         let mut inner = HashMap::new();
