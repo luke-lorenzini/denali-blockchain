@@ -28,8 +28,9 @@ impl Transactor {
     }
     fn parse<T: Thing>(&self, message: Message<T>) -> Result<H256> {
         if message.program.verify()? {
-            let xxx = &self.chain.state;
-            message.program.run(&message.payload, xxx)?;
+            // todo this should not be clone, but arc<mut
+            let mut xxx = self.chain.state.clone();
+            message.program.run(&message.payload, &mut xxx)?;
         }
         Ok(H256::default())
     }

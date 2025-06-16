@@ -20,5 +20,5 @@ impl From<String> for H256 {
 
 pub trait Thing {
     fn verify(&self) -> Result<bool>;
-    fn run(&self, payload: &str, state: &State) -> Result<()>;
+    fn run(&self, payload: &str, state: &mut State) -> Result<()>;
 }

@@ -12,7 +12,7 @@ pub struct Bank {
 }
 
 impl Thing for Bank {
-    fn run(&self, payload: &str, _state: &State) -> Result<()> {
+    fn run(&self, payload: &str, _state: &mut State) -> Result<()> {
         bank_program(payload)?;
         Ok(())
     }

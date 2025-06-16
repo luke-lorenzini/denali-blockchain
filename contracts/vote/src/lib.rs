@@ -8,7 +8,7 @@ pub struct Votes {
 }
 
 impl Thing for Votes {
-    fn run(&self, payload: &str, _state: &State) -> Result<()> {
+    fn run(&self, payload: &str, _state: &mut State) -> Result<()> {
         vote_program(payload).unwrap();
         Ok(())
     }
