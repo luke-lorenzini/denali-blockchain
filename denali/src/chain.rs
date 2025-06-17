@@ -1,7 +1,7 @@
 use hex::encode;
 use sha2::{Digest, Sha256};
 
-use crate::storage::State;
+use crate::{storage::State, types::H256};
 
 const VERSION: u32 = 0;
 const TRANSACTIONS_PER_BLOCK: u32 = 10;
@@ -9,15 +9,15 @@ const TRANSACTIONS_PER_BLOCK: u32 = 10;
 #[derive(Debug)]
 struct Header {
     version: u32,
-    previous_block_hash: String,
-    merkle_tree_root: String,
+    previous_block_hash: H256,
+    merkle_tree_root: H256,
     timestamp: u64,
     difficulty: u32,
     nonce: u32,
 }
 
 impl Header {
-    fn new(previous_block_hash: String, merkle_tree_root: String) -> Self {
+    fn new(previous_block_hash: H256, merkle_tree_root: H256) -> Self {
         Self {
             version: VERSION,
             previous_block_hash,
@@ -31,8 +31,8 @@ impl Header {
     fn genesis() -> Self {
         Self {
             version: VERSION,
-            previous_block_hash: String::default(),
-            merkle_tree_root: String::default(),
+            previous_block_hash: H256::default(),
+            merkle_tree_root: H256::default(),
             timestamp: u64::default(),
             difficulty: u32::default(),
             nonce: u32::default(),
@@ -42,8 +42,8 @@ impl Header {
     fn to_bytes(&self) -> Vec<u8> {
         [
             &self.version.to_be_bytes()[..],
-            self.previous_block_hash.as_bytes(),
-            self.merkle_tree_root.as_bytes(),
+            // &self.previous_block_hash.to_bytes()[..],
+            // &self.merkle_tree_root.to_bytes()[..],
             &self.timestamp.to_be_bytes()[..],
             &self.difficulty.to_be_bytes()[..],
             &self.nonce.to_be_bytes()[..],
@@ -51,11 +51,11 @@ impl Header {
         .concat()
     }
 
-    fn calc_hash(&self) -> String {
+    fn calc_hash(&self) -> H256 {
         let mut hasher = Sha256::new();
         hasher.update(self.to_bytes());
         let res = hasher.finalize();
-        encode(res)
+        encode(res).into()
     }
 }
 
@@ -67,7 +67,7 @@ struct Block {
 }
 
 impl Block {
-    fn new(previous_block_hash: String, merkle_tree_root: String) -> Self {
+    fn new(previous_block_hash: H256, merkle_tree_root: H256) -> Self {
         let header = Header::new(previous_block_hash, merkle_tree_root);
         Self {
             header,
@@ -99,7 +99,7 @@ impl Default for Chain {
 }
 
 impl Chain {
-    pub fn new() -> Self {
+    pub(crate) fn new() -> Self {
         let genesis_block = vec![Block::genesis()];
         let state = State::new();
         Self {
@@ -109,7 +109,11 @@ impl Chain {
         }
     }
 
-    pub fn add_next_block(&mut self, merkle_tree_root: String) -> bool {
+    pub(crate) fn get_chain_height(&self) -> u32 {
+        self.count
+    }
+
+    pub(crate) fn add_next_block(&mut self, merkle_tree_root: H256) -> bool {
         let block = Block::new(self.get_block_hash(), merkle_tree_root);
         println!("block: {block:?}");
         self.blocks.push(block);
@@ -117,7 +121,7 @@ impl Chain {
         true
     }
 
-    fn get_block_hash(&self) -> String {
+    fn get_block_hash(&self) -> H256 {
         self.blocks.last().unwrap().header.calc_hash()
     }
 }
@@ -135,8 +139,8 @@ mod test {
     #[test]
     fn test_new_genesis_header() {
         let header = Header::genesis();
-        assert_eq!(header.previous_block_hash, String::default());
-        assert_eq!(header.merkle_tree_root, String::default());
+        assert_eq!(header.previous_block_hash, H256::default());
+        assert_eq!(header.merkle_tree_root, H256::default());
     }
 
     #[test]

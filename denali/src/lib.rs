@@ -32,6 +32,11 @@ impl Transactor {
         let chain = Chain::new();
         Transactor { chain }
     }
+
+    pub fn get_chain_height(&self) -> u32 {
+        self.chain.get_chain_height()
+    }
+
     fn parse<T: Thing>(&self, message: Message<T>) -> Result<H256> {
         if message.program.verify()? {
             // todo this should not be clone, but arc<mut
@@ -47,7 +52,7 @@ impl Transactor {
         // res
     }
 
-    fn process_transactions<T: Thing>(&self, transactions: Vec<Message<T>>) -> String {
+    fn process_transactions<T: Thing>(&self, transactions: Vec<Message<T>>) -> H256 {
         let mut hasher = Sha256::new();
         for transaction in transactions {
             let tx = self.process_transaction(transaction).unwrap();
@@ -56,7 +61,7 @@ impl Transactor {
         let res = hasher.finalize();
         let merkle_tree_root = encode(res);
         println!("{merkle_tree_root:?}");
-        merkle_tree_root
+        merkle_tree_root.into()
     }
 
     pub fn create_new_block<T: Thing>(&mut self, messages: Vec<Message<T>>) -> bool {
