@@ -25,14 +25,12 @@ use tokio::{
 
 const BATCH_SIZE: usize = 10;
 
-type Contract = unsafe extern "C" fn() -> Box<dyn Thing>;
-// type Contract = unsafe fn() -> *mut c_void;
-// type Contract = unsafe fn() -> *mut dyn Thing;
-
 async fn stuff(contract_map: Arc<Mutex<HashMap<&'static str, Box<dyn Thing + 'static>>>>) {
     // load vote
-    let vote = "vote";
     unsafe {
+        // type Contract = unsafe fn() -> *mut c_void;
+        type Contract = unsafe extern "C" fn() -> Box<dyn Thing>;
+        let vote = "vote";
         let lib =
             libloading::Library::new("/home/luke/repos/denali/target/debug/libvote.so").unwrap();
         let func: libloading::Symbol<Contract> = lib.get(b"create_thing").unwrap();
@@ -45,8 +43,9 @@ async fn stuff(contract_map: Arc<Mutex<HashMap<&'static str, Box<dyn Thing + 'st
     }
 
     // load fake
-    let fake = "fake";
     unsafe {
+        type Contract = unsafe extern "C" fn() -> Box<dyn Thing>;
+        let fake = "fake";
         let lib =
             libloading::Library::new("/home/luke/repos/denali/target/debug/libfake.so").unwrap();
         let func: libloading::Symbol<Contract> = lib.get(b"create_thing").unwrap();
@@ -59,8 +58,9 @@ async fn stuff(contract_map: Arc<Mutex<HashMap<&'static str, Box<dyn Thing + 'st
     }
 
     // load bank
-    let bank = "bank";
     unsafe {
+        type Contract = unsafe extern "C" fn() -> Box<dyn Thing>;
+        let bank = "bank";
         let lib =
             libloading::Library::new("/home/luke/repos/denali/target/debug/libbank.so").unwrap();
         let func: libloading::Symbol<Contract> = lib.get(b"create_thing").unwrap();
@@ -85,32 +85,40 @@ async fn main() {
     let (tx, mut rx) = channel(100);
     let (tx_msg_queue, mut rx_msg_queue) = channel(100);
 
+    let mut flag = 0;
     let listener_thread = spawn(async move {
         loop {
             sleep(Duration::from_millis(100)).await;
 
-            // // A fake
-            // let payload = r#"
-            // {
-            //     "fake": 0
-            // }"#;
-            // let program = "fake";
-
-            // A vote
-            let payload = r#"
-            {
-                "candidate": 1
-            }"#;
-            let program = "vote";
-
-            // A bank
-            // let payload = r#"
-            // {
-            //     "payer": 0,
-            //     "payee": 1,
-            //     "amount": 10,
-            // }"#;
-            // let program = "bank";
+            let payload;
+            let program;
+            if flag == 0 {
+                flag += 1;
+                // A fake - working
+                payload = r#"
+                {
+                    "fake": 0
+                }"#;
+                program = "fake";
+            } else if flag == 1 {
+                flag += 1;
+                // A bank
+                payload = r#"
+                {
+                    "payer": 0,
+                    "payee": 1,
+                    "amount": 10.0
+                }"#;
+                program = "bank";
+            } else {
+                flag = 0;
+                // A vote - working
+                payload = r#"
+                {
+                    "candidate": 1
+                }"#;
+                program = "vote";
+            }
 
             tx.send((program, payload)).await.unwrap();
         }
@@ -134,30 +142,32 @@ async fn main() {
         println!("notified");
 
         while let Some(messages) = rx_msg_queue.recv().await {
-            let name = messages.clone().last().unwrap().0;
-            println!("{name:?}");
-            let payload: String = messages.clone().last().clone().unwrap().1.into();
-            let program = contract_map.lock().await;
-            let program = program.get(name).unwrap();
-            let message = Message {
-                program,
-                payload: payload.clone(),
-            };
-            let messages = vec![message];
-            // let _res = transactor.clone().write().await.create_new_block(messages);
-
-            // weird thing that needs to live in unsafe to prevent seg fault
             unsafe {
-                let _lib =
-                    libloading::Library::new("/home/luke/repos/denali/target/debug/libvote.so")
-                        .unwrap();
-                // let func: libloading::Symbol<Contract> = lib.get(b"create_thing").unwrap();
-                // let xxx = func();
-                // let message = Message {
-                //     program: &xxx,
-                //     payload: payload.clone()
-                // };
-                // let messages = vec![message];
+                let name = messages.clone().last().unwrap().0;
+                let _lib = match name {
+                    "fake" => {
+                        libloading::Library::new("/home/luke/repos/denali/target/debug/libfake.so")
+                            .unwrap()
+                    }
+                    "vote" => {
+                        libloading::Library::new("/home/luke/repos/denali/target/debug/libvote.so")
+                            .unwrap()
+                    }
+                    "bank" => {
+                        libloading::Library::new("/home/luke/repos/denali/target/debug/libbank.so")
+                            .unwrap()
+                    }
+                    _ => todo!("Invalid name"),
+                };
+                println!("{name:?}");
+                let payload: String = messages.clone().last().clone().unwrap().1.into();
+                let program = contract_map.lock().await;
+                let program = program.get(name).unwrap();
+                let message = Message {
+                    program,
+                    payload: payload.clone(),
+                };
+                let messages = vec![message];
                 let _res = transactor.clone().write().await.create_new_block(messages);
             }
         }

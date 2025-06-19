@@ -1,4 +1,4 @@
-use std::ffi::c_void;
+// use std::ffi::c_void;
 
 use denali::{storage::State, types::Thing};
 use log::debug;
@@ -6,8 +6,7 @@ use serde::Deserialize;
 use serde_json::Result;
 
 #[unsafe(no_mangle)]
-pub extern "C" 
-fn create_thing() -> *mut dyn Thing {
+pub extern "C" fn create_thing() -> *mut dyn Thing {
     println!("Creating vote");
     let vote = Vote::new(5);
     let boxed_vote = Box::new(vote);
@@ -16,8 +15,8 @@ fn create_thing() -> *mut dyn Thing {
 }
 
 // #[unsafe(no_mangle)]
-// pub unsafe extern "C" 
-// fn _create_thing() -> *mut c_void {
+// pub extern "C"
+// fn create_thing() -> *mut c_void {
 //     #[repr(C)]
 //     struct RawTraitObject {
 //         data_ptr: *mut c_void,
@@ -26,13 +25,15 @@ fn create_thing() -> *mut dyn Thing {
 
 //     let boxed_vote: Box<dyn Thing> = Box::new(Vote::new(5));
 //     let raw_fat_ptr = Box::into_raw(boxed_vote);
-//     let (data_ptr, vtable_ptr): (*mut c_void, *mut c_void) = std::mem::transmute(raw_fat_ptr);
+//     unsafe {
+//         let (data_ptr, vtable_ptr): (*mut c_void, *mut c_void) = std::mem::transmute(raw_fat_ptr);
 
-//     let boxed_raw_trait_object = Box::new(RawTraitObject {
-//         data_ptr,
-//         vtable_ptr
-//     });
-//     Box::into_raw(boxed_raw_trait_object) as *mut c_void
+//         let boxed_raw_trait_object = Box::new(RawTraitObject {
+//             data_ptr,
+//             vtable_ptr
+//         });
+//         Box::into_raw(boxed_raw_trait_object) as *mut c_void
+//     }
 // }
 
 #[derive(Clone)]

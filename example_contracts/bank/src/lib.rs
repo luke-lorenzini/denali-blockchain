@@ -1,16 +1,13 @@
 use std::collections::HashMap;
-use std::ffi::c_void;
+// use std::ffi::c_void;
 
+use denali::{storage::State, types::Thing};
 use rust_decimal::{Decimal, dec};
 use serde::Deserialize;
 use serde_json::Result;
-use denali::{storage::State, types::Thing};
 
 #[unsafe(no_mangle)]
-pub extern "C"
-// fn create_thing() -> Box<dyn Thing> {
-// fn create_thing() -> *mut c_void {
-fn create_thing() -> *mut dyn Thing {
+pub extern "C" fn create_thing() -> *mut dyn Thing {
     println!("Creating bank");
     let bank = Bank::new(vec![]);
     let boxed_bank = Box::new(bank);
@@ -86,6 +83,7 @@ fn bank_program(payload: &str) -> Result<()> {
     if bank.accounts.contains_key(&payload.payee) && bank.accounts.contains_key(&payload.payer) {
         let account_details = bank.accounts.get(&payload.payer).expect("Already checked");
         if account_details.balance >= payload.amount {
+            println!("SUCCESSFUL TRANSFER");
         } else {
             todo!("NSF")
         }
