@@ -1,10 +1,23 @@
 use std::collections::HashMap;
+use std::ffi::c_void;
 
 use rust_decimal::{Decimal, dec};
 use serde::Deserialize;
 use serde_json::Result;
-
 use denali::{storage::State, types::Thing};
+
+#[unsafe(no_mangle)]
+pub extern "C"
+// fn create_thing() -> Box<dyn Thing> {
+// fn create_thing() -> *mut c_void {
+fn create_thing() -> *mut dyn Thing {
+    println!("Creating bank");
+    let bank = Bank::new(vec![]);
+    let boxed_bank = Box::new(bank);
+    let raw_bank = Box::into_raw(boxed_bank);
+    // raw_bank as *mut c_void
+    raw_bank
+}
 
 #[derive(Debug)]
 pub struct Bank {
@@ -12,6 +25,10 @@ pub struct Bank {
 }
 
 impl Thing for Bank {
+    fn name(&self) -> &'static str {
+        "bank"
+    }
+
     fn run(&self, payload: &str, _state: &mut State) -> Result<()> {
         bank_program(payload)?;
         Ok(())

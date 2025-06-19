@@ -30,7 +30,8 @@ impl H256 {
 impl From<&str> for H256 {
     fn from(value: &str) -> Self {
         println!("val str: {:?}", value.as_bytes());
-        Self::default()
+        // Self::default()
+        todo!()
     }
 }
 
@@ -38,11 +39,16 @@ impl From<String> for H256 {
     fn from(value: String) -> Self {
         println!("val string: {:?}", value.as_bytes());
         // H256::new(value.as_bytes()
-        Self::default()
+        // Self::default()
+        // Self.to_owned()
+        // todo!()
+        H256::default()
     }
 }
 
-pub trait Thing {
+pub trait Thing: Send + Sync {
+    // pub trait Thing {
+    fn name(&self) -> &'static str;
     fn verify(&self) -> Result<bool>;
     fn run(&self, payload: &str, state: &mut State) -> Result<()>;
 }

@@ -10,6 +10,7 @@ use crate::{
 mod chain;
 pub mod storage;
 pub mod types;
+// pub mod web;
 
 #[derive(Clone)]
 pub struct Message<T> {
@@ -37,7 +38,9 @@ impl Transactor {
         self.chain.get_chain_height()
     }
 
-    fn parse<T: Thing>(&self, message: Message<T>) -> Result<H256> {
+    // working
+    fn parse(&self, message: Message<&Box<dyn Thing>>) -> Result<H256> {
+        println!("parse");
         if message.program.verify()? {
             // todo this should not be clone, but arc<mut
             let mut xxx = self.chain.state.clone();
@@ -46,13 +49,17 @@ impl Transactor {
         Ok(H256::default())
     }
 
-    fn process_transaction<T: Thing>(&self, transaction: Message<T>) -> Result<H256> {
+    // working
+    fn process_transaction(&self, transaction: Message<&Box<dyn Thing>>) -> Result<H256> {
+        // fn process_transaction<T: Thing>(&self, transaction: Message<T>) -> Result<H256> {
+        println!("process_transaction");
         self.parse(transaction)
-        // transaction.to_be_bytes()
-        // res
     }
 
-    fn process_transactions<T: Thing>(&self, transactions: Vec<Message<T>>) -> H256 {
+    // working
+    fn process_transactions(&self, transactions: Vec<Message<&Box<dyn Thing>>>) -> H256 {
+        // fn process_transactions<T: Thing>(&self, transactions: Vec<Message<T>>) -> H256 {
+        println!("process_transactions");
         let mut hasher = Sha256::new();
         for transaction in transactions {
             let tx = self.process_transaction(transaction).unwrap();
@@ -64,7 +71,10 @@ impl Transactor {
         merkle_tree_root.into()
     }
 
-    pub fn create_new_block<T: Thing>(&mut self, messages: Vec<Message<T>>) -> bool {
+    // working
+    pub fn create_new_block(&mut self, messages: Vec<Message<&Box<dyn Thing>>>) -> bool {
+        // pub fn create_new_block<T: Thing>(&mut self, messages: Vec<Message<T>>) -> bool {
+        println!("create_new_block");
         let merkle_tree_root = self.process_transactions(messages);
         self.chain.add_next_block(merkle_tree_root);
         true

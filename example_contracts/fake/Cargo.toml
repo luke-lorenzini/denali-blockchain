@@ -1,5 +1,5 @@
 [package]
-name = "vote"
+name = "fake"
 version = "0.1.0"
 edition = "2024"
 
@@ -9,3 +9,8 @@ log.workspace = true
 rust_decimal.workspace = true
 serde.workspace = true
 serde_json.workspace = true
+
+[lib]
+crate-type = [
+    "cdylib",
+]

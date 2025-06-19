@@ -9,8 +9,8 @@ const TRANSACTIONS_PER_BLOCK: u32 = 10;
 #[derive(Debug)]
 struct Header {
     version: u32,
-    previous_block_hash: H256,
-    merkle_tree_root: H256,
+    _previous_block_hash: H256,
+    _merkle_tree_root: H256,
     timestamp: u64,
     difficulty: u32,
     nonce: u32,
@@ -20,8 +20,8 @@ impl Header {
     fn new(previous_block_hash: H256, merkle_tree_root: H256) -> Self {
         Self {
             version: VERSION,
-            previous_block_hash,
-            merkle_tree_root,
+            _previous_block_hash: previous_block_hash,
+            _merkle_tree_root: merkle_tree_root,
             timestamp: u64::default(),
             difficulty: u32::default(),
             nonce: u32::default(),
@@ -31,8 +31,8 @@ impl Header {
     fn genesis() -> Self {
         Self {
             version: VERSION,
-            previous_block_hash: H256::default(),
-            merkle_tree_root: H256::default(),
+            _previous_block_hash: H256::default(),
+            _merkle_tree_root: H256::default(),
             timestamp: u64::default(),
             difficulty: u32::default(),
             nonce: u32::default(),
@@ -139,8 +139,8 @@ mod test {
     #[test]
     fn test_new_genesis_header() {
         let header = Header::genesis();
-        assert_eq!(header.previous_block_hash, H256::default());
-        assert_eq!(header.merkle_tree_root, H256::default());
+        assert_eq!(header._previous_block_hash, H256::default());
+        assert_eq!(header._merkle_tree_root, H256::default());
     }
 
     #[test]
