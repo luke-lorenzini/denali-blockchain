@@ -1,4 +1,4 @@
-// use std::ffi::c_void;
+use std::ffi::c_void;
 use std::{collections::HashMap, sync::Arc};
 
 // use axum::{
@@ -25,11 +25,12 @@ use tokio::{
 
 const BATCH_SIZE: usize = 10;
 
-async fn stuff(contract_map: Arc<Mutex<HashMap<&'static str, Box<dyn Thing + 'static>>>>) {
+fn stuff() -> HashMap<String, Box<(dyn Thing + 'static)>> {
+    let mut contract_map: HashMap<String, Box<(dyn Thing + 'static)>> = HashMap::new();
     // load vote
     unsafe {
-        // type Contract = unsafe fn() -> *mut c_void;
-        type Contract = unsafe extern "C" fn() -> Box<dyn Thing>;
+        // type Contract = unsafe extern "C" fn() -> Box<dyn Thing>;
+        type Contract = unsafe fn() -> *mut c_void;
         let vote = "vote";
         let lib =
             libloading::Library::new("/home/luke/repos/denali/target/debug/libvote.so").unwrap();
@@ -37,14 +38,26 @@ async fn stuff(contract_map: Arc<Mutex<HashMap<&'static str, Box<dyn Thing + 'st
         let xxx = func();
         // let xxx = Box::from_raw(xxx as *mut dyn Thing);
 
-        contract_map.lock().await.insert(vote, xxx);
-        let v = contract_map.lock().await.get(vote).unwrap().verify();
-        println!("{v:?}");
+        #[repr(C)]
+        struct RawTraitObject {
+            data_ptr: *mut c_void,
+            vtable_ptr: *mut c_void,
+        }
+
+        let boxed_raw_trait_object = Box::from_raw(xxx as *mut RawTraitObject);
+        let raw_trait_object = *boxed_raw_trait_object;
+        let raw_fat_ptr: *mut dyn Thing = std::mem::transmute(raw_trait_object);
+        let owned_plugin_box: Box<dyn Thing> = Box::from_raw(raw_fat_ptr);
+
+        contract_map.insert(vote.into(), owned_plugin_box);
+        let v = contract_map.get(vote).unwrap().verify();
+        println!("Result of verification for vote: {v:?}");
     }
 
     // load fake
     unsafe {
-        type Contract = unsafe extern "C" fn() -> Box<dyn Thing>;
+        // type Contract = unsafe extern "C" fn() -> Box<dyn Thing>;
+        type Contract = unsafe fn() -> *mut c_void;
         let fake = "fake";
         let lib =
             libloading::Library::new("/home/luke/repos/denali/target/debug/libfake.so").unwrap();
@@ -52,14 +65,26 @@ async fn stuff(contract_map: Arc<Mutex<HashMap<&'static str, Box<dyn Thing + 'st
         let xxx = func();
         // let xxx = Box::from_raw(xxx as *mut dyn Thing);
 
-        contract_map.lock().await.insert(fake, xxx);
-        let v = contract_map.lock().await.get(fake).unwrap().verify();
+        #[repr(C)]
+        struct RawTraitObject {
+            data_ptr: *mut c_void,
+            vtable_ptr: *mut c_void,
+        }
+
+        let boxed_raw_trait_object = Box::from_raw(xxx as *mut RawTraitObject);
+        let raw_trait_object = *boxed_raw_trait_object;
+        let raw_fat_ptr: *mut dyn Thing = std::mem::transmute(raw_trait_object);
+        let owned_plugin_box: Box<dyn Thing> = Box::from_raw(raw_fat_ptr);
+
+        contract_map.insert(fake.into(), owned_plugin_box);
+        let v = contract_map.get(fake).unwrap().verify();
         println!("{v:?}");
     }
 
     // load bank
     unsafe {
-        type Contract = unsafe extern "C" fn() -> Box<dyn Thing>;
+        // type Contract = unsafe extern "C" fn() -> Box<dyn Thing>;
+        type Contract = unsafe fn() -> *mut c_void;
         let bank = "bank";
         let lib =
             libloading::Library::new("/home/luke/repos/denali/target/debug/libbank.so").unwrap();
@@ -67,19 +92,33 @@ async fn stuff(contract_map: Arc<Mutex<HashMap<&'static str, Box<dyn Thing + 'st
         let xxx = func();
         // let xxx = Box::from_raw(xxx as *mut dyn Thing);
 
-        contract_map.lock().await.insert(bank, xxx);
-        let v = contract_map.lock().await.get(bank).unwrap().verify();
+        #[repr(C)]
+        struct RawTraitObject {
+            data_ptr: *mut c_void,
+            vtable_ptr: *mut c_void,
+        }
+
+        let boxed_raw_trait_object = Box::from_raw(xxx as *mut RawTraitObject);
+        let raw_trait_object = *boxed_raw_trait_object;
+        let raw_fat_ptr: *mut dyn Thing = std::mem::transmute(raw_trait_object);
+        let owned_plugin_box: Box<dyn Thing> = Box::from_raw(raw_fat_ptr);
+
+        contract_map.insert(bank.into(), owned_plugin_box);
+        let v = contract_map.get(bank).unwrap().verify();
         println!("{v:?}");
     }
+
+    contract_map
 }
 
 #[tokio::main]
 async fn main() {
     println!("Hello, denali");
 
-    let contract_map = Arc::new(Mutex::new(HashMap::new()));
+    //let contract_map = Arc::new(Mutex::new(HashMap::new()));
 
-    stuff(contract_map.clone()).await;
+    let contract_map = stuff();
+    let contract_map = Arc::new(Mutex::new(contract_map));
 
     let transactor = Arc::new(RwLock::new(Transactor::new()));
     let (tx, mut rx) = channel(100);
