@@ -43,8 +43,9 @@ impl State {
         self.0.contains_key(&address)
     }
 
-    pub fn get_value(&self, key: &str) {
+    pub fn get_value(&self, key: &str) -> String {
         let _value = self.0.get(key);
+        "get_value".into()
     }
 
     pub fn set_value(&mut self, key: &str, value: &str) {
