@@ -1,3 +1,5 @@
+use std::ffi::c_void;
+
 use derive_more::AsRef;
 use serde_json::Result;
 
@@ -39,6 +41,12 @@ impl From<String> for H256 {
         println!("val string: {:?}", value.as_bytes());
         Self::default()
     }
+}
+
+#[repr(C)]
+pub struct RawTraitObject {
+    pub data_ptr: *mut c_void,
+    pub vtable_ptr: *mut c_void,
 }
 
 pub trait Thing: Send + Sync {

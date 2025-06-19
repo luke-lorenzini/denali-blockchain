@@ -13,7 +13,7 @@ use std::{collections::HashMap, sync::Arc};
 use denali::{
     Message,
     Transactor,
-    types::Thing,
+    types::{RawTraitObject, Thing},
     // storage::State,
     // web::{chain_height, root}
 };
@@ -25,8 +25,8 @@ use tokio::{
 
 const BATCH_SIZE: usize = 10;
 
-fn stuff() -> HashMap<String, Box<(dyn Thing + 'static)>> {
-    let mut contract_map: HashMap<String, Box<(dyn Thing + 'static)>> = HashMap::new();
+fn stuff() -> HashMap<String, Box<(dyn Thing)>> {
+    let mut contract_map = HashMap::new();
     // load vote
     unsafe {
         // type Contract = unsafe extern "C" fn() -> Box<dyn Thing>;
@@ -37,12 +37,6 @@ fn stuff() -> HashMap<String, Box<(dyn Thing + 'static)>> {
         let func: libloading::Symbol<Contract> = lib.get(b"create_thing").unwrap();
         let xxx = func();
         // let xxx = Box::from_raw(xxx as *mut dyn Thing);
-
-        #[repr(C)]
-        struct RawTraitObject {
-            data_ptr: *mut c_void,
-            vtable_ptr: *mut c_void,
-        }
 
         let boxed_raw_trait_object = Box::from_raw(xxx as *mut RawTraitObject);
         let raw_trait_object = *boxed_raw_trait_object;
@@ -65,12 +59,6 @@ fn stuff() -> HashMap<String, Box<(dyn Thing + 'static)>> {
         let xxx = func();
         // let xxx = Box::from_raw(xxx as *mut dyn Thing);
 
-        #[repr(C)]
-        struct RawTraitObject {
-            data_ptr: *mut c_void,
-            vtable_ptr: *mut c_void,
-        }
-
         let boxed_raw_trait_object = Box::from_raw(xxx as *mut RawTraitObject);
         let raw_trait_object = *boxed_raw_trait_object;
         let raw_fat_ptr: *mut dyn Thing = std::mem::transmute(raw_trait_object);
@@ -92,12 +80,6 @@ fn stuff() -> HashMap<String, Box<(dyn Thing + 'static)>> {
         let xxx = func();
         // let xxx = Box::from_raw(xxx as *mut dyn Thing);
 
-        #[repr(C)]
-        struct RawTraitObject {
-            data_ptr: *mut c_void,
-            vtable_ptr: *mut c_void,
-        }
-
         let boxed_raw_trait_object = Box::from_raw(xxx as *mut RawTraitObject);
         let raw_trait_object = *boxed_raw_trait_object;
         let raw_fat_ptr: *mut dyn Thing = std::mem::transmute(raw_trait_object);
@@ -114,8 +96,6 @@ fn stuff() -> HashMap<String, Box<(dyn Thing + 'static)>> {
 #[tokio::main]
 async fn main() {
     println!("Hello, denali");
-
-    //let contract_map = Arc::new(Mutex::new(HashMap::new()));
 
     let contract_map = stuff();
     let contract_map = Arc::new(Mutex::new(contract_map));

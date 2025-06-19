@@ -1,6 +1,9 @@
 use std::ffi::c_void;
 
-use denali::{storage::State, types::Thing};
+use denali::{
+    storage::State,
+    types::{RawTraitObject, Thing},
+};
 use log::debug;
 use serde::Deserialize;
 use serde_json::Result;
@@ -15,12 +18,6 @@ use serde_json::Result;
 
 #[unsafe(no_mangle)]
 pub extern "C" fn create_thing() -> *mut c_void {
-    #[repr(C)]
-    struct RawTraitObject {
-        data_ptr: *mut c_void,
-        vtable_ptr: *mut c_void,
-    }
-
     println!("Creating vote");
     let boxed_vote: Box<dyn Thing> = Box::new(Vote::new(5));
     let raw_fat_ptr = Box::into_raw(boxed_vote);

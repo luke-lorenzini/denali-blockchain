@@ -1,7 +1,10 @@
 use std::collections::HashMap;
 use std::ffi::c_void;
 
-use denali::{storage::State, types::Thing};
+use denali::{
+    storage::State,
+    types::{RawTraitObject, Thing},
+};
 use rust_decimal::{Decimal, dec};
 use serde::Deserialize;
 use serde_json::Result;
@@ -16,12 +19,6 @@ use serde_json::Result;
 
 #[unsafe(no_mangle)]
 pub extern "C" fn create_thing() -> *mut c_void {
-    #[repr(C)]
-    struct RawTraitObject {
-        data_ptr: *mut c_void,
-        vtable_ptr: *mut c_void,
-    }
-
     println!("Creating bank");
     let boxed_bank: Box<dyn Thing> = Box::new(Bank::new(vec![]));
     let raw_fat_ptr = Box::into_raw(boxed_bank);
