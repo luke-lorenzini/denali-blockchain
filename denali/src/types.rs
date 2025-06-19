@@ -30,19 +30,14 @@ impl H256 {
 impl From<&str> for H256 {
     fn from(value: &str) -> Self {
         println!("val str: {:?}", value.as_bytes());
-        // Self::default()
-        todo!()
+        Self::default()
     }
 }
 
 impl From<String> for H256 {
     fn from(value: String) -> Self {
         println!("val string: {:?}", value.as_bytes());
-        // H256::new(value.as_bytes()
-        // Self::default()
-        // Self.to_owned()
-        // todo!()
-        H256::default()
+        Self::default()
     }
 }
 

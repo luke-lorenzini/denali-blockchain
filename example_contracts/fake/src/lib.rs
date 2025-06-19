@@ -10,9 +10,7 @@ pub extern "C" fn create_thing() -> *mut dyn Thing {
     println!("Creating fake");
     let fake = Fake;
     let boxed_fake = Box::new(fake);
-    let raw_fake = Box::into_raw(boxed_fake);
-    // raw_fake as *mut c_void
-    raw_fake
+    Box::into_raw(boxed_fake)
 }
 
 #[derive(Clone)]

@@ -1,4 +1,4 @@
-use std::ffi::c_void;
+// use std::ffi::c_void;
 use std::{collections::HashMap, sync::Arc};
 
 // use axum::{
@@ -160,7 +160,7 @@ async fn main() {
                     _ => todo!("Invalid name"),
                 };
                 println!("{name:?}");
-                let payload: String = messages.clone().last().clone().unwrap().1.into();
+                let payload: String = messages.clone().last().unwrap().1.into();
                 let program = contract_map.lock().await;
                 let program = program.get(name).unwrap();
                 let message = Message {

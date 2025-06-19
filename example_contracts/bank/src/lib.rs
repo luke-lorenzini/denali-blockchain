@@ -11,9 +11,7 @@ pub extern "C" fn create_thing() -> *mut dyn Thing {
     println!("Creating bank");
     let bank = Bank::new(vec![]);
     let boxed_bank = Box::new(bank);
-    let raw_bank = Box::into_raw(boxed_bank);
-    // raw_bank as *mut c_void
-    raw_bank
+    Box::into_raw(boxed_bank)
 }
 
 #[derive(Debug)]

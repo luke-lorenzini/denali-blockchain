@@ -10,8 +10,7 @@ pub extern "C" fn create_thing() -> *mut dyn Thing {
     println!("Creating vote");
     let vote = Vote::new(5);
     let boxed_vote = Box::new(vote);
-    let raw_vote = Box::into_raw(boxed_vote);
-    raw_vote
+    Box::into_raw(boxed_vote)
 }
 
 // #[unsafe(no_mangle)]
