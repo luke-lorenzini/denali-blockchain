@@ -80,3 +80,14 @@ impl Transactor {
         true
     }
 }
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn test_new_chain_from_default() {
+        let transactor = Transactor::default();
+        assert_eq!(transactor.chain.get_chain_height(), 1)
+    }
+}

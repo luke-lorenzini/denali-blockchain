@@ -132,7 +132,7 @@ mod test {
 
     #[test]
     fn test_new_header() {
-        let header = Header::new("0".into(), "".into());
+        let header = Header::new(H256::default(), H256::default());
         assert_eq!(header.version, 0);
     }
 
@@ -146,6 +146,13 @@ mod test {
     #[test]
     fn test_new_chain() {
         let chain = Chain::new();
+        let expected = 1;
+        assert_eq!(chain.count, expected)
+    }
+
+    #[test]
+    fn test_new_chain_from_default() {
+        let chain = Chain::default();
         let expected = 1;
         assert_eq!(chain.count, expected)
     }
