@@ -1,5 +1,8 @@
 use std::ffi::c_void;
-use std::{collections::HashMap, sync::Arc};
+use std::{collections::HashMap, sync::{
+    Arc,
+    // Mutex
+}};
 
 // use axum::{
 //     routing::{
@@ -19,7 +22,9 @@ use denali::{
 };
 use tokio::{
     join, spawn,
-    sync::{Mutex, RwLock, mpsc::channel},
+    sync::{
+        Mutex, 
+        RwLock, mpsc::channel},
     time::{Duration, sleep},
 };
 
@@ -161,39 +166,41 @@ async fn main() {
         println!("notified");
 
         while let Some(messages) = rx_msg_queue.recv().await {
-            println!("transactions: {messages:?}");
-            unsafe {
-                let name = messages.clone().last().unwrap().0;
-                let _lib = match name {
-                    "fake" => {
-                        libloading::Library::new("/home/luke/repos/denali/target/debug/libfake.so")
-                            .unwrap()
-                    }
-                    "vote" => {
-                        libloading::Library::new("/home/luke/repos/denali/target/debug/libvote.so")
-                            .unwrap()
-                    }
-                    "bank" => {
-                        libloading::Library::new("/home/luke/repos/denali/target/debug/libbank.so")
-                            .unwrap()
-                    }
-                    _ => todo!("Invalid name"),
-                };
-                println!("{name:?}");
-                let payload: String = messages.clone().last().unwrap().1.into();
-                let program = contract_map.lock().await;
-                let program = program.get(name).unwrap();
-                let message = Message {
-                    program,
-                    payload: payload.clone(),
-                };
-                let messages = vec![message];
-                let _res = transactor
-                    .clone()
-                    .write()
-                    .await
-                    .create_new_block(messages)
-                    .await;
+            for message in messages {
+                println!("transactions: {message:?}");
+                unsafe {
+                    let name = message.0;
+                    let _lib = match name {
+                        "fake" => {
+                            libloading::Library::new("/home/luke/repos/denali/target/debug/libfake.so")
+                                .unwrap()
+                        }
+                        "vote" => {
+                            libloading::Library::new("/home/luke/repos/denali/target/debug/libvote.so")
+                                .unwrap()
+                        }
+                        "bank" => {
+                            libloading::Library::new("/home/luke/repos/denali/target/debug/libbank.so")
+                                .unwrap()
+                        }
+                        _ => todo!("Invalid name"),
+                    };
+                    println!("{name:?}");
+                    let payload: String = message.1.into();
+                    let program = contract_map.lock().await;
+                    let program = program.get(name).unwrap();
+                    let message = Message {
+                        program,
+                        payload: payload.clone(),
+                    };
+                    let messages = vec![message];
+                    let _res = transactor
+                        .clone()
+                        .write()
+                        .await
+                        .create_new_block(messages)
+                        .await;
+                }
             }
         }
     });
