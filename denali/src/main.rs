@@ -188,7 +188,12 @@ async fn main() {
                     payload: payload.clone(),
                 };
                 let messages = vec![message];
-                let _res = transactor.clone().write().await.create_new_block(messages).await;
+                let _res = transactor
+                    .clone()
+                    .write()
+                    .await
+                    .create_new_block(messages)
+                    .await;
             }
         }
     });

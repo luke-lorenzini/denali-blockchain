@@ -1,4 +1,7 @@
-use std::{collections::HashMap, sync::{Arc, Mutex}};
+use std::{
+    collections::HashMap,
+    sync::{Arc, Mutex},
+};
 
 use hex::encode;
 use serde_json::Result;
@@ -62,14 +65,21 @@ impl Transactor {
     }
 
     // working
-    async fn process_transactions(&self, transactions: Vec<Message<&Box<dyn Thing>>>, transactions_map: Arc<Mutex<HashMap<H256, String>>>) -> Vec<H256> {
+    async fn process_transactions(
+        &self,
+        transactions: Vec<Message<&Box<dyn Thing>>>,
+        transactions_map: Arc<Mutex<HashMap<H256, String>>>,
+    ) -> Vec<H256> {
         // fn process_transactions<T: Thing>(&self, transactions: Vec<Message<T>>) -> H256 {
         println!("process_transactions");
         let mut res = vec![];
         // let mut hasher = Sha256::new();
         for transaction in transactions {
             let tx = self.process_transaction(transaction.clone()).await.unwrap();
-            transactions_map.lock().unwrap().insert(tx.clone(), transaction.payload);
+            transactions_map
+                .lock()
+                .unwrap()
+                .insert(tx.clone(), transaction.payload);
             // hasher.update(tx.as_ref());
             res.push(tx);
         }
@@ -86,7 +96,9 @@ impl Transactor {
         println!("create_new_block");
         let transactions = Arc::new(Mutex::new(HashMap::new()));
         let mut hasher = Sha256::new();
-        let txs = self.process_transactions(messages, transactions.clone()).await;
+        let txs = self
+            .process_transactions(messages, transactions.clone())
+            .await;
         for tx in txs {
             hasher.update(tx.as_ref());
         }
@@ -94,7 +106,8 @@ impl Transactor {
         let merkle_tree_root = encode(res);
         // let merkle_tree_root = self.process_transactions(messages);
         let thing = Arc::try_unwrap(transactions).unwrap().into_inner().unwrap();
-        self.chain.add_next_block(merkle_tree_root.try_into().unwrap(), thing);
+        self.chain
+            .add_next_block(merkle_tree_root.try_into().unwrap(), thing);
         true
     }
 }
@@ -116,9 +129,7 @@ mod test {
     }
 
     #[test]
-    fn test_parse() {
-
-    }
+    fn test_parse() {}
 
     // #[tokio::test]
     // async fn test_process_transaction() {

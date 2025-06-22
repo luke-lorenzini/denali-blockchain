@@ -1,4 +1,5 @@
-use std::{collections::HashMap, 
+use std::{
+    collections::HashMap,
     // str::FromStr
 };
 
@@ -48,13 +49,13 @@ impl State {
         let value = self.0.get(key);
         match value {
             Some(v) => *v,
-            None => u32::default()
+            None => u32::default(),
         }
     }
 
     pub fn set_value(&mut self, key: &str, value: u32) {
         println!("key: {key:?}");
-        
+
         if self.0.contains_key(key) {
             println!("found key");
             let val = self.0.get_mut(key).expect("Already checked");

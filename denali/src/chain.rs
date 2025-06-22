@@ -1,7 +1,7 @@
-use std::{collections::HashMap, sync::{
-    Arc,
-    Mutex
-}};
+use std::{
+    collections::HashMap,
+    sync::{Arc, Mutex},
+};
 
 // use tokio::sync::Mutex;
 use hex::encode;
@@ -73,7 +73,11 @@ struct Block {
 }
 
 impl Block {
-    fn new(previous_block_hash: H256, merkle_tree_root: H256, transactions: HashMap<H256, String>) -> Self {
+    fn new(
+        previous_block_hash: H256,
+        merkle_tree_root: H256,
+        transactions: HashMap<H256, String>,
+    ) -> Self {
         let header = Header::new(previous_block_hash, merkle_tree_root);
         Self {
             header,
@@ -119,7 +123,11 @@ impl Chain {
         self.count
     }
 
-    pub(crate) fn add_next_block(&mut self, merkle_tree_root: H256, transactions: HashMap<H256, String>) -> bool {
+    pub(crate) fn add_next_block(
+        &mut self,
+        merkle_tree_root: H256,
+        transactions: HashMap<H256, String>,
+    ) -> bool {
         let block = Block::new(self.get_block_hash(), merkle_tree_root, transactions);
         println!("block: {block:?}");
         self.blocks.push(block);
@@ -173,7 +181,10 @@ mod test {
     fn test_calc_hash() {
         let header = Header::new(H256::default(), H256::default());
         let res = header.calc_hash();
-        let expected = H256::new([222, 71, 201, 178, 126, 184, 211, 0, 219, 181, 242, 195, 83, 230, 50, 195, 147, 38, 44, 240, 99, 64, 196, 250, 127, 27, 64, 196, 203, 211, 111, 144]);
+        let expected = H256::new([
+            222, 71, 201, 178, 126, 184, 211, 0, 219, 181, 242, 195, 83, 230, 50, 195, 147, 38, 44,
+            240, 99, 64, 196, 250, 127, 27, 64, 196, 203, 211, 111, 144,
+        ]);
         assert_eq!(res, expected)
     }
 
@@ -189,7 +200,10 @@ mod test {
     fn test_get_block_hash() {
         let chain = Chain::new();
         let res = chain.get_block_hash();
-        let expected = H256::new([222, 71, 201, 178, 126, 184, 211, 0, 219, 181, 242, 195, 83, 230, 50, 195, 147, 38, 44, 240, 99, 64, 196, 250, 127, 27, 64, 196, 203, 211, 111, 144]);
+        let expected = H256::new([
+            222, 71, 201, 178, 126, 184, 211, 0, 219, 181, 242, 195, 83, 230, 50, 195, 147, 38, 44,
+            240, 99, 64, 196, 250, 127, 27, 64, 196, 203, 211, 111, 144,
+        ]);
         assert_eq!(res, expected)
     }
 }

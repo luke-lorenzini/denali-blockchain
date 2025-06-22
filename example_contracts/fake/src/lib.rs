@@ -1,13 +1,13 @@
-use std::{ffi::c_void, sync::{
-    Arc,
-    Mutex
-}};
+use std::{
+    ffi::c_void,
+    sync::{Arc, Mutex},
+};
 
 // use tokio::sync::Mutex;
 use async_trait::async_trait;
 use denali::{
     storage::State,
-    types::{RawTraitObject, Thing, H256},
+    types::{H256, RawTraitObject, Thing},
 };
 // use hex::encode;
 // use log::debug;

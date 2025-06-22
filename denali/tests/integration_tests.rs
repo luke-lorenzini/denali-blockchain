@@ -1,10 +1,11 @@
-use std::sync::{
-    Arc,
-    Mutex
-};
+use std::sync::{Arc, Mutex};
 
 use async_trait::async_trait;
-use denali::{storage::State, types::{Thing, H256}, Message, Transactor};
+use denali::{
+    Message, Transactor,
+    storage::State,
+    types::{H256, Thing},
+};
 use serde::Deserialize;
 
 #[tokio::test]

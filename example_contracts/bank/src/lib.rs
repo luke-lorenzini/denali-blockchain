@@ -1,13 +1,14 @@
-use std::{ffi::c_void, collections::HashMap, sync::{
-    Arc,
-    Mutex
-}};
+use std::{
+    collections::HashMap,
+    ffi::c_void,
+    sync::{Arc, Mutex},
+};
 
 // use tokio::sync::Mutex;
 use async_trait::async_trait;
 use denali::{
     storage::State,
-    types::{RawTraitObject, Thing, H256},
+    types::{H256, RawTraitObject, Thing},
 };
 use rust_decimal::{Decimal, dec};
 use serde::Deserialize;

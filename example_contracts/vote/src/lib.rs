@@ -1,13 +1,13 @@
-use std::{ffi::c_void, sync::{
-    Arc,
-    Mutex,
-}};
+use std::{
+    ffi::c_void,
+    sync::{Arc, Mutex},
+};
 
 // use tokio::sync::Mutex;
 use async_trait::async_trait;
 use denali::{
     storage::State,
-    types::{RawTraitObject, Thing, H256},
+    types::{H256, RawTraitObject, Thing},
 };
 // use log::debug;
 use serde::Deserialize;
@@ -68,7 +68,7 @@ impl Vote {
     }
 }
 
-async fn vote_program(payload: &str,  state: Arc<Mutex<State>>) -> Result<()> {
+async fn vote_program(payload: &str, state: Arc<Mutex<State>>) -> Result<()> {
     #[derive(Debug, Deserialize)]
     struct Ballot {
         candidate: String,
@@ -79,7 +79,10 @@ async fn vote_program(payload: &str,  state: Arc<Mutex<State>>) -> Result<()> {
 
     let current_count = state.lock().unwrap().get_value(&payload.candidate);
     println!("{current_count:?}");
-    state.lock().unwrap().set_value(&payload.candidate, current_count+1);
+    state
+        .lock()
+        .unwrap()
+        .set_value(&payload.candidate, current_count + 1);
 
     Ok(())
 }
