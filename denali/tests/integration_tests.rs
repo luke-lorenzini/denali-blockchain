@@ -20,7 +20,7 @@ async fn test_modify_single_value() {
     .into();
     let message = Message {
         payload,
-        program: &fake,
+        program: fake.as_ref(),
     };
     transactions.push(message);
     let res = transactor.create_new_block(transactions).await;
@@ -39,7 +39,7 @@ async fn test_add_one_block() {
     .into();
     let message = Message {
         payload,
-        program: &fake,
+        program: fake.as_ref(),
     };
     transactions.push(message);
     let res = transactor.create_new_block(transactions).await;
@@ -62,7 +62,7 @@ async fn test_add_multiple_blocks() {
     .into();
     let message = Message {
         payload,
-        program: &fake,
+        program: fake.as_ref(),
     };
     transactions.push(message);
     let res = transactor.create_new_block(transactions.clone()).await;
@@ -76,7 +76,7 @@ async fn test_add_multiple_blocks() {
     .into();
     let message = Message {
         payload,
-        program: &fake,
+        program: fake.as_ref(),
     };
     transactions.push(message);
     let res = transactor.create_new_block(transactions.clone()).await;
@@ -90,7 +90,7 @@ async fn test_add_multiple_blocks() {
     .into();
     let message = Message {
         payload,
-        program: &fake,
+        program: fake.as_ref(),
     };
     transactions.push(message);
     let res = transactor.create_new_block(transactions.clone()).await;

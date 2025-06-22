@@ -44,7 +44,7 @@ impl Transactor {
     }
 
     // working
-    async fn parse(&self, message: Message<&Box<dyn Thing>>) -> Result<H256> {
+    async fn parse(&self, message: Message<&dyn Thing>) -> Result<H256> {
         println!("parse");
         if message.program.verify()? {
             // todo this should not be clone, but arc<mut
@@ -57,7 +57,7 @@ impl Transactor {
     }
 
     // working
-    async fn process_transaction(&self, transaction: Message<&Box<dyn Thing>>) -> Result<H256> {
+    async fn process_transaction(&self, transaction: Message<&dyn Thing>) -> Result<H256> {
         // fn process_transaction<T: Thing>(&self, transaction: Message<T>) -> Result<H256> {
         println!("process_transaction");
 
@@ -67,7 +67,7 @@ impl Transactor {
     // working
     async fn process_transactions(
         &self,
-        transactions: Vec<Message<&Box<dyn Thing>>>,
+        transactions: Vec<Message<&dyn Thing>>,
         transactions_map: Arc<Mutex<HashMap<H256, String>>>,
     ) -> Vec<H256> {
         // fn process_transactions<T: Thing>(&self, transactions: Vec<Message<T>>) -> H256 {
@@ -91,7 +91,7 @@ impl Transactor {
     }
 
     // working
-    pub async fn create_new_block(&mut self, messages: Vec<Message<&Box<dyn Thing>>>) -> bool {
+    pub async fn create_new_block(&mut self, messages: Vec<Message<&dyn Thing>>) -> bool {
         // pub fn create_new_block<T: Thing>(&mut self, messages: Vec<Message<T>>) -> bool {
         println!("create_new_block");
         let transactions = Arc::new(Mutex::new(HashMap::new()));

@@ -1,6 +1,5 @@
 use std::ffi::c_void;
-use std::{collections::HashMap, sync::{
-    Arc}};
+use std::{collections::HashMap, sync::Arc};
 
 // use axum::{
 //     routing::{
@@ -20,7 +19,7 @@ use denali::{
 };
 use tokio::{
     join, spawn,
-    sync::{        RwLock, mpsc::channel},
+    sync::{RwLock, mpsc::channel},
     time::{Duration, sleep},
 };
 
@@ -167,24 +166,24 @@ async fn main() {
                 unsafe {
                     let name = message.0;
                     let _lib = match name {
-                        "fake" => {
-                            libloading::Library::new("/home/luke/repos/denali/target/debug/libfake.so")
-                                .unwrap()
-                        }
-                        "vote" => {
-                            libloading::Library::new("/home/luke/repos/denali/target/debug/libvote.so")
-                                .unwrap()
-                        }
-                        "bank" => {
-                            libloading::Library::new("/home/luke/repos/denali/target/debug/libbank.so")
-                                .unwrap()
-                        }
+                        "fake" => libloading::Library::new(
+                            "/home/luke/repos/denali/target/debug/libfake.so",
+                        )
+                        .unwrap(),
+                        "vote" => libloading::Library::new(
+                            "/home/luke/repos/denali/target/debug/libvote.so",
+                        )
+                        .unwrap(),
+                        "bank" => libloading::Library::new(
+                            "/home/luke/repos/denali/target/debug/libbank.so",
+                        )
+                        .unwrap(),
                         _ => todo!("Invalid name"),
                     };
                     println!("{name:?}");
                     let payload: String = message.1.into();
                     let program = contract_map.clone();
-                    let program = program.get(name).unwrap();
+                    let program = program.get(name).unwrap().as_ref();
                     let message = Message {
                         program,
                         payload: payload.clone(),
