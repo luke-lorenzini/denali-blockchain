@@ -50,7 +50,7 @@ impl Thing for Vote {
 
     async fn run(&self, payload: &str, state: Arc<Mutex<State>>) -> Result<H256> {
         println!("vote run");
-        vote_program(payload, state).await.unwrap();
+        vote_program(payload, state).unwrap();
         Ok(H256::default())
     }
 
@@ -61,6 +61,7 @@ impl Thing for Vote {
 }
 
 impl Vote {
+    #[must_use]
     pub fn new(number_of_candidates: u32) -> Self {
         let votes = vec![0; number_of_candidates as usize];
         println!("VOTE!");
@@ -68,7 +69,7 @@ impl Vote {
     }
 }
 
-async fn vote_program(payload: &str, state: Arc<Mutex<State>>) -> Result<()> {
+fn vote_program(payload: &str, state: Arc<Mutex<State>>) -> Result<()> {
     #[derive(Debug, Deserialize)]
     struct Ballot {
         candidate: String,

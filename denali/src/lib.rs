@@ -34,11 +34,13 @@ impl Default for Transactor {
 }
 
 impl Transactor {
+    #[must_use]
     pub fn new() -> Self {
         let chain = Chain::new();
         Transactor { chain }
     }
 
+    #[must_use]
     pub fn get_chain_height(&self) -> u32 {
         self.chain.get_chain_height()
     }

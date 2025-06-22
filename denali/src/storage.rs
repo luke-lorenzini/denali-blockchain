@@ -16,6 +16,7 @@ impl Default for State {
 }
 
 impl State {
+    #[must_use]
     pub fn new() -> Self {
         // Start: RocksDB
         // NB: db is automatically closed at end of lifetime
@@ -45,6 +46,7 @@ impl State {
         self.0.contains_key(&address)
     }
 
+    #[must_use]
     pub fn get_value(&self, key: &str) -> u32 {
         let value = self.0.get(key);
         match value {

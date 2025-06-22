@@ -15,6 +15,7 @@ use crate::storage::State;
 pub struct H256([u8; 32]);
 
 impl H256 {
+    #[must_use]
     pub fn new(inner: [u8; 32]) -> Self {
         H256(inner)
     }
