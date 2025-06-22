@@ -1,9 +1,15 @@
-use std::ffi::c_void;
+use std::{ffi::c_void, sync::{
+    Arc,
+    Mutex
+}};
 
+// use tokio::sync::Mutex;
+use async_trait::async_trait;
 use denali::{
     storage::State,
-    types::{RawTraitObject, Thing},
+    types::{RawTraitObject, Thing, H256},
 };
+// use hex::encode;
 // use log::debug;
 // use serde::Deserialize;
 use serde_json::Result;
@@ -35,16 +41,19 @@ pub extern "C" fn create_thing() -> *mut c_void {
 #[derive(Clone)]
 struct Fake;
 
+#[async_trait]
 impl Thing for Fake {
     fn name(&self) -> &'static str {
         "fake"
     }
 
-    fn run(&self, _payload: &str, state: &mut State) -> Result<()> {
+    async fn run(&self, _payload: &str, state: Arc<Mutex<State>>) -> Result<H256> {
         println!("run fake");
-        let s = state.get_value("test");
+        let s = state.lock().unwrap().get_value("test");
         println!("{s:?}");
-        Ok(())
+        // let res = encode("test");
+        // Ok(H256::try_from(res).unwrap())
+        Ok(H256::default())
     }
 
     fn verify(&self) -> Result<bool> {

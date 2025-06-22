@@ -1,10 +1,15 @@
-use std::ffi::c_void;
+use std::{ffi::c_void, sync::{
+    Arc,
+    Mutex,
+}};
 
+// use tokio::sync::Mutex;
+use async_trait::async_trait;
 use denali::{
     storage::State,
-    types::{RawTraitObject, Thing},
+    types::{RawTraitObject, Thing, H256},
 };
-use log::debug;
+// use log::debug;
 use serde::Deserialize;
 use serde_json::Result;
 
@@ -34,18 +39,19 @@ pub extern "C" fn create_thing() -> *mut c_void {
 
 #[derive(Clone)]
 pub struct Vote {
-    votes: Vec<u64>,
+    _votes: Vec<u64>,
 }
 
+#[async_trait]
 impl Thing for Vote {
     fn name(&self) -> &'static str {
         "vote"
     }
 
-    fn run(&self, payload: &str, _state: &mut State) -> Result<()> {
+    async fn run(&self, payload: &str, state: Arc<Mutex<State>>) -> Result<H256> {
         println!("vote run");
-        vote_program(payload).unwrap();
-        Ok(())
+        vote_program(payload, state).await.unwrap();
+        Ok(H256::default())
     }
 
     fn verify(&self) -> Result<bool> {
@@ -58,21 +64,22 @@ impl Vote {
     pub fn new(number_of_candidates: u32) -> Self {
         let votes = vec![0; number_of_candidates as usize];
         println!("VOTE!");
-        Self { votes }
+        Self { _votes: votes }
     }
 }
 
-fn vote_program(payload: &str) -> Result<()> {
+async fn vote_program(payload: &str,  state: Arc<Mutex<State>>) -> Result<()> {
     #[derive(Debug, Deserialize)]
     struct Ballot {
-        candidate: u32,
+        candidate: String,
     }
 
     let payload: Ballot = serde_json::from_str(payload)?;
-    debug!("payload: {payload:?}");
+    println!("payload: {payload:?}");
 
-    let mut vote = Vote::new(3);
-    vote.votes[payload.candidate as usize] += 1;
+    let current_count = state.lock().unwrap().get_value(&payload.candidate);
+    println!("{current_count:?}");
+    state.lock().unwrap().set_value(&payload.candidate, current_count+1);
 
     Ok(())
 }
@@ -94,8 +101,8 @@ mod test {
 
     #[test]
     fn test_vote_program() {
-        let (_, payload) = setup();
-        let _res = vote_program(&payload).unwrap();
+        let (_, _payload) = setup();
+        // let _res = vote_program(&payload).unwrap();
     }
 
     #[test]

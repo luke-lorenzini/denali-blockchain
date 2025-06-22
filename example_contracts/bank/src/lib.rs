@@ -1,9 +1,13 @@
-use std::collections::HashMap;
-use std::ffi::c_void;
+use std::{ffi::c_void, collections::HashMap, sync::{
+    Arc,
+    Mutex
+}};
 
+// use tokio::sync::Mutex;
+use async_trait::async_trait;
 use denali::{
     storage::State,
-    types::{RawTraitObject, Thing},
+    types::{RawTraitObject, Thing, H256},
 };
 use rust_decimal::{Decimal, dec};
 use serde::Deserialize;
@@ -38,14 +42,15 @@ pub struct Bank {
     accounts: HashMap<u32, Account>,
 }
 
+#[async_trait]
 impl Thing for Bank {
     fn name(&self) -> &'static str {
         "bank"
     }
 
-    fn run(&self, payload: &str, _state: &mut State) -> Result<()> {
+    async fn run(&self, payload: &str, _state: Arc<Mutex<State>>) -> Result<H256> {
         bank_program(payload)?;
-        Ok(())
+        Ok(H256::default())
     }
 
     fn verify(&self) -> Result<bool> {

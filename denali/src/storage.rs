@@ -1,9 +1,12 @@
-use std::{collections::HashMap, str::FromStr};
+use std::{collections::HashMap, 
+    // str::FromStr
+};
 
 // use rocksdb::{DB, Options};
+// use serde::de::value;
 
 #[derive(Clone, Debug)]
-pub struct State(HashMap<String, String>);
+pub struct State(HashMap<String, u32>);
 
 impl Default for State {
     fn default() -> Self {
@@ -13,8 +16,8 @@ impl Default for State {
 
 impl State {
     pub fn new() -> Self {
-        // // Start: RocksDB
-        // // NB: db is automatically closed at end of lifetime
+        // Start: RocksDB
+        // NB: db is automatically closed at end of lifetime
         // let tempdir = tempfile::Builder::new()
         //     .prefix("_path_for_rocksdb_storage")
         //     .tempdir()
@@ -31,11 +34,9 @@ impl State {
         // db.delete(b"my key").unwrap();
         // }
         // let _ = DB::destroy(&Options::default(), path);
-        // // End: RocksDB
+        // End: RocksDB
 
-        let mut inner = HashMap::new();
-        // Write our program address for now
-        inner.insert("fake_program".into(), "fake_program".into());
+        let inner = HashMap::new();
         State(inner)
     }
 
@@ -43,17 +44,24 @@ impl State {
         self.0.contains_key(&address)
     }
 
-    pub fn get_value(&self, key: &str) -> String {
-        let _value = self.0.get(key);
-        "get_value".into()
+    pub fn get_value(&self, key: &str) -> u32 {
+        let value = self.0.get(key);
+        match value {
+            Some(v) => *v,
+            None => u32::default()
+        }
     }
 
-    pub fn set_value(&mut self, key: &str, value: &str) {
+    pub fn set_value(&mut self, key: &str, value: u32) {
+        println!("key: {key:?}");
+        
         if self.0.contains_key(key) {
+            println!("found key");
             let val = self.0.get_mut(key).expect("Already checked");
-            *val = String::from_str(value).unwrap();
+            *val += 1;
         } else {
-            self.0.insert(key.into(), value.into());
+            println!("didn't found key");
+            self.0.insert(key.into(), value);
         }
     }
 

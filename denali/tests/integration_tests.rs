@@ -1,8 +1,14 @@
-use denali::{Message, Transactor, storage::State, types::Thing};
+use std::sync::{
+    Arc,
+    Mutex
+};
+
+use async_trait::async_trait;
+use denali::{storage::State, types::{Thing, H256}, Message, Transactor};
 use serde::Deserialize;
 
-#[test]
-fn test_modify_single_value() {
+#[tokio::test]
+async fn test_modify_single_value() {
     let mut transactor = Transactor::new();
     let mut transactions = Vec::new();
     let fake = Box::new(FakeProgram) as Box<dyn Thing>;
@@ -16,12 +22,12 @@ fn test_modify_single_value() {
         program: &fake,
     };
     transactions.push(message);
-    let res = transactor.create_new_block(transactions);
+    let res = transactor.create_new_block(transactions).await;
     assert_eq!(res, true)
 }
 
-#[test]
-fn test_add_one_block() {
+#[tokio::test]
+async fn test_add_one_block() {
     let mut transactor = Transactor::new();
     let mut transactions = Vec::new();
     let fake = Box::new(FakeProgram) as Box<dyn Thing>;
@@ -35,15 +41,15 @@ fn test_add_one_block() {
         program: &fake,
     };
     transactions.push(message);
-    let res = transactor.create_new_block(transactions);
+    let res = transactor.create_new_block(transactions).await;
     assert_eq!(res, true);
     let res = transactor.get_chain_height();
     let expected = 2;
     assert_eq!(res, expected)
 }
 
-#[test]
-fn test_add_multiple_blocks() {
+#[tokio::test]
+async fn test_add_multiple_blocks() {
     let mut transactor = Transactor::new();
     let mut transactions = Vec::new();
     let fake = Box::new(FakeProgram) as Box<dyn Thing>;
@@ -58,7 +64,7 @@ fn test_add_multiple_blocks() {
         program: &fake,
     };
     transactions.push(message);
-    let res = transactor.create_new_block(transactions.clone());
+    let res = transactor.create_new_block(transactions.clone()).await;
     transactions.clear();
     assert_eq!(res, true);
 
@@ -72,7 +78,7 @@ fn test_add_multiple_blocks() {
         program: &fake,
     };
     transactions.push(message);
-    let res = transactor.create_new_block(transactions.clone());
+    let res = transactor.create_new_block(transactions.clone()).await;
     transactions.clear();
     assert_eq!(res, true);
 
@@ -86,7 +92,7 @@ fn test_add_multiple_blocks() {
         program: &fake,
     };
     transactions.push(message);
-    let res = transactor.create_new_block(transactions.clone());
+    let res = transactor.create_new_block(transactions.clone()).await;
     transactions.clear();
     assert_eq!(res, true);
 
@@ -97,18 +103,20 @@ fn test_add_multiple_blocks() {
 
 #[derive(Debug, Deserialize)]
 struct Payload {
+    #[allow(dead_code)]
     fake: String,
 }
 
 #[derive(Clone)]
 struct FakeProgram;
 
+#[async_trait]
 impl Thing for FakeProgram {
     fn name(&self) -> &'static str {
         "fake"
     }
 
-    fn run(&self, payload: &str, state: &mut State) -> serde_json::Result<()> {
+    async fn run(&self, payload: &str, state: Arc<Mutex<State>>) -> serde_json::Result<H256> {
         println!("run");
         println!("{payload:?}");
         println!("{state:?}");
@@ -116,10 +124,10 @@ impl Thing for FakeProgram {
         let xxx: Payload = serde_json::from_slice(payload.as_bytes()).unwrap();
         println!("{xxx:?}");
 
-        state.set_value("fake_program", 0);
+        state.lock().unwrap().set_value("fake_program", 0);
         println!("{state:?}");
 
-        Ok(())
+        Ok(H256::default())
     }
 
     fn verify(&self) -> serde_json::Result<bool> {

@@ -112,7 +112,7 @@ async fn main() {
             let payload;
             let program;
             if flag == 0 {
-                flag += 1;
+                flag = 1;
                 // A fake - working
                 payload = r#"
                 {
@@ -120,7 +120,7 @@ async fn main() {
                 }"#;
                 program = "fake";
             } else if flag == 1 {
-                flag += 1;
+                flag = 2;
                 // A bank
                 payload = r#"
                 {
@@ -134,7 +134,7 @@ async fn main() {
                 // A vote - working
                 payload = r#"
                 {
-                    "candidate": 1
+                    "candidate": "candidate1"
                 }"#;
                 program = "vote";
             }
@@ -161,6 +161,7 @@ async fn main() {
         println!("notified");
 
         while let Some(messages) = rx_msg_queue.recv().await {
+            println!("transactions: {messages:?}");
             unsafe {
                 let name = messages.clone().last().unwrap().0;
                 let _lib = match name {
@@ -187,7 +188,7 @@ async fn main() {
                     payload: payload.clone(),
                 };
                 let messages = vec![message];
-                let _res = transactor.clone().write().await.create_new_block(messages);
+                let _res = transactor.clone().write().await.create_new_block(messages).await;
             }
         }
     });
