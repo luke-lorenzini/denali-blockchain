@@ -1,8 +1,6 @@
 use std::ffi::c_void;
 use std::{collections::HashMap, sync::{
-    Arc,
-    // Mutex
-}};
+    Arc}};
 
 // use axum::{
 //     routing::{
@@ -22,9 +20,7 @@ use denali::{
 };
 use tokio::{
     join, spawn,
-    sync::{
-        Mutex, 
-        RwLock, mpsc::channel},
+    sync::{        RwLock, mpsc::channel},
     time::{Duration, sleep},
 };
 
@@ -103,7 +99,7 @@ async fn main() {
     println!("Hello, denali");
 
     let contract_map = stuff();
-    let contract_map = Arc::new(Mutex::new(contract_map));
+    let contract_map = Arc::new(contract_map);
 
     let transactor = Arc::new(RwLock::new(Transactor::new()));
     let (tx, mut rx) = channel(100);
@@ -187,7 +183,7 @@ async fn main() {
                     };
                     println!("{name:?}");
                     let payload: String = message.1.into();
-                    let program = contract_map.lock().await;
+                    let program = contract_map.clone();
                     let program = program.get(name).unwrap();
                     let message = Message {
                         program,
