@@ -6,7 +6,6 @@ use std::{
 use async_trait::async_trait;
 use derive_more::AsRef;
 use hex::decode;
-use libloading::Library;
 use serde_json::Result;
 // use tokio::sync::Mutex;
 
@@ -57,20 +56,6 @@ pub trait Thing: Send + Sync {
     fn name(&self) -> &'static str;
     fn verify(&self) -> Result<bool>;
     async fn run(&self, payload: &str, state: Arc<Mutex<State>>) -> Result<H256>;
-}
-
-pub struct Plugin {
-    _library: Library,
-    pub thing: Box<dyn Thing>,
-}
-
-impl Plugin {
-    pub fn new(library: Library, program: Box<dyn Thing>) -> Self {
-        Plugin {
-            _library: library,
-            thing: program,
-        }
-    }
 }
 
 #[cfg(test)]

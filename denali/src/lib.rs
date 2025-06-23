@@ -13,6 +13,7 @@ use crate::{
 };
 
 mod chain;
+pub mod plugin;
 pub mod storage;
 pub mod types;
 // pub mod web;
