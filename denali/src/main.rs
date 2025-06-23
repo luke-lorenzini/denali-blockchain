@@ -13,7 +13,7 @@ use std::{collections::HashMap, sync::Arc};
 use denali::{
     Message,
     Transactor,
-    types::{RawTraitObject, Thing},
+    types::{Plugin, RawTraitObject, Thing},
     // storage::State,
     // web::{chain_height, root}
 };
@@ -25,7 +25,7 @@ use tokio::{
 
 const BATCH_SIZE: usize = 10;
 
-fn stuff() -> HashMap<String, Box<(dyn Thing)>> {
+fn stuff() -> HashMap<String, Plugin> {
     let mut contract_map = HashMap::new();
     // load vote
     unsafe {
@@ -43,8 +43,10 @@ fn stuff() -> HashMap<String, Box<(dyn Thing)>> {
         let raw_fat_ptr: *mut dyn Thing = std::mem::transmute(raw_trait_object);
         let owned_plugin_box: Box<dyn Thing> = Box::from_raw(raw_fat_ptr);
 
-        contract_map.insert(vote.into(), owned_plugin_box);
-        let v = contract_map.get(vote).unwrap().verify();
+        let plugin = Plugin::new(lib, owned_plugin_box);
+
+        contract_map.insert(vote.into(), plugin);
+        let v = contract_map.get(vote).unwrap().thing.verify();
         println!("Result of verification for vote: {v:?}");
     }
 
@@ -64,8 +66,10 @@ fn stuff() -> HashMap<String, Box<(dyn Thing)>> {
         let raw_fat_ptr: *mut dyn Thing = std::mem::transmute(raw_trait_object);
         let owned_plugin_box: Box<dyn Thing> = Box::from_raw(raw_fat_ptr);
 
-        contract_map.insert(fake.into(), owned_plugin_box);
-        let v = contract_map.get(fake).unwrap().verify();
+        let plugin = Plugin::new(lib, owned_plugin_box);
+
+        contract_map.insert(fake.into(), plugin);
+        let v = contract_map.get(fake).unwrap().thing.verify();
         println!("{v:?}");
     }
 
@@ -85,8 +89,10 @@ fn stuff() -> HashMap<String, Box<(dyn Thing)>> {
         let raw_fat_ptr: *mut dyn Thing = std::mem::transmute(raw_trait_object);
         let owned_plugin_box: Box<dyn Thing> = Box::from_raw(raw_fat_ptr);
 
-        contract_map.insert(bank.into(), owned_plugin_box);
-        let v = contract_map.get(bank).unwrap().verify();
+        let plugin = Plugin::new(lib, owned_plugin_box);
+
+        contract_map.insert(bank.into(), plugin);
+        let v = contract_map.get(bank).unwrap().thing.verify();
         println!("{v:?}");
     }
 
@@ -143,16 +149,14 @@ async fn main() {
         }
     });
 
-    let receiver_thread = spawn({
-        async move {
-            let mut transactions = Vec::new();
+    let receiver_thread = spawn(async move {
+        let mut transactions = Vec::new();
 
-            while let Some(i) = rx.recv().await {
-                transactions.push(i);
-                if transactions.len() == BATCH_SIZE {
-                    let batch = std::mem::take(&mut transactions);
-                    tx_msg_queue.send(batch).await.unwrap();
-                }
+        while let Some(i) = rx.recv().await {
+            transactions.push(i);
+            if transactions.len() == BATCH_SIZE {
+                let batch = std::mem::take(&mut transactions);
+                tx_msg_queue.send(batch).await.unwrap();
             }
         }
     });
@@ -162,49 +166,34 @@ async fn main() {
 
         while let Some(messages) = rx_msg_queue.recv().await {
             for message in messages {
-                println!("transactions: {message:?}");
-                unsafe {
-                    let name = message.0;
-                    let _lib = match name {
-                        "fake" => libloading::Library::new(
-                            "/home/luke/repos/denali/target/debug/libfake.so",
-                        )
-                        .unwrap(),
-                        "vote" => libloading::Library::new(
-                            "/home/luke/repos/denali/target/debug/libvote.so",
-                        )
-                        .unwrap(),
-                        "bank" => libloading::Library::new(
-                            "/home/luke/repos/denali/target/debug/libbank.so",
-                        )
-                        .unwrap(),
-                        _ => todo!("Invalid name"),
-                    };
-                    println!("{name:?}");
-                    let payload: String = message.1.into();
-                    let program = contract_map.clone();
-                    let program = program.get(name).unwrap().as_ref();
-                    let message = Message {
-                        program,
-                        payload: payload.clone(),
-                    };
-                    let messages = vec![message];
-                    let _res = transactor
-                        .clone()
-                        .write()
-                        .await
-                        .create_new_block(messages)
-                        .await;
-                }
+                // println!("transactions: {message:?}");
+                let name = message.0;
+                // println!("{name:?}");
+                let payload: String = message.1.into();
+                let program = contract_map.clone();
+                let program = program.get(name).unwrap().thing.as_ref();
+                let message = Message {
+                    program,
+                    payload: payload.clone(),
+                };
+                let messages = vec![message];
+                let _res = transactor
+                    .clone()
+                    .write()
+                    .await
+                    .create_new_block(messages)
+                    .await;
             }
         }
     });
 
-    // let web_thread = spawn(async {
+    // let web_thread = spawn(async move {
+    //     // let transactor = Arc::new(RwLock::new(Transactor::new()));
     //     let app = Router::new()
     //     // `GET /` goes to `root`
     //     .route("/", get(root))
-    //     .route("/chain_height", get(chain_height));
+    //     // .route("/chain_height", get(chain_height))
+    //     .with_state(transactor.clone());
 
     //     let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await.unwrap();
     //     axum::serve(listener, app).await.unwrap();
