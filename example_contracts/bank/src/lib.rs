@@ -35,7 +35,7 @@ pub extern "C" fn create_thing() -> *mut c_void {
             data_ptr,
             vtable_ptr,
         });
-        Box::into_raw(boxed_raw_trait_object) as *mut c_void
+        Box::into_raw(boxed_raw_trait_object).cast::<c_void>()
     }
 }
 

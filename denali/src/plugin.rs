@@ -36,7 +36,7 @@ impl Plugin {
             let xxx = func();
             // let xxx = Box::from_raw(xxx as *mut dyn Thing);
 
-            let boxed_raw_trait_object = Box::from_raw(xxx as *mut RawTraitObject);
+            let boxed_raw_trait_object = Box::from_raw(xxx.cast::<RawTraitObject>());
             let raw_trait_object = *boxed_raw_trait_object;
             let raw_fat_ptr: *mut dyn Thing = std::mem::transmute(raw_trait_object);
             let owned_plugin_box: Box<dyn Thing> = Box::from_raw(raw_fat_ptr);
@@ -59,7 +59,7 @@ impl Plugin {
             let xxx = func();
             // let xxx = Box::from_raw(xxx as *mut dyn Thing);
 
-            let boxed_raw_trait_object = Box::from_raw(xxx as *mut RawTraitObject);
+            let boxed_raw_trait_object = Box::from_raw(xxx.cast::<RawTraitObject>());
             let raw_trait_object = *boxed_raw_trait_object;
             let raw_fat_ptr: *mut dyn Thing = std::mem::transmute(raw_trait_object);
             let owned_plugin_box: Box<dyn Thing> = Box::from_raw(raw_fat_ptr);
@@ -82,7 +82,7 @@ impl Plugin {
             let xxx = func();
             // let xxx = Box::from_raw(xxx as *mut dyn Thing);
 
-            let boxed_raw_trait_object = Box::from_raw(xxx as *mut RawTraitObject);
+            let boxed_raw_trait_object = Box::from_raw(xxx.cast::<RawTraitObject>());
             let raw_trait_object = *boxed_raw_trait_object;
             let raw_fat_ptr: *mut dyn Thing = std::mem::transmute(raw_trait_object);
             let owned_plugin_box: Box<dyn Thing> = Box::from_raw(raw_fat_ptr);
