@@ -2,7 +2,13 @@ use std::{collections::HashMap, ffi::c_void, sync::Arc};
 
 use libloading::Library;
 
-use crate::{Thing, types::RawTraitObject};
+use crate::Thing;
+
+#[repr(C)]
+pub struct RawTraitObject {
+    pub data_ptr: *mut c_void,
+    pub vtable_ptr: *mut c_void,
+}
 
 pub struct Plugin {
     _library: Library,

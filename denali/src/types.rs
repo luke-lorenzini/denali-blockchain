@@ -1,7 +1,4 @@
-use std::{
-    ffi::c_void,
-    sync::{Arc, Mutex},
-};
+use std::sync::{Arc, Mutex};
 
 use async_trait::async_trait;
 use derive_more::AsRef;
@@ -43,12 +40,6 @@ impl TryFrom<&str> for H256 {
             .map_err(|_e| "Failed to decode")?;
         Ok(Self(inner))
     }
-}
-
-#[repr(C)]
-pub struct RawTraitObject {
-    pub data_ptr: *mut c_void,
-    pub vtable_ptr: *mut c_void,
 }
 
 #[async_trait]
