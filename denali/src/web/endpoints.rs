@@ -1,6 +1,10 @@
 use std::sync::Arc;
 
-use axum::{extract::{Query, State}, http::StatusCode, response::IntoResponse};
+use axum::{
+    extract::{Query, State},
+    http::StatusCode,
+    response::IntoResponse,
+};
 use serde::Deserialize;
 use tokio::sync::RwLock;
 
@@ -26,13 +30,10 @@ pub async fn chain_height(State(state): State<Arc<RwLock<Transactor>>>) -> impl 
     (StatusCode::OK, height)
 }
 
-// #[axum::debug_handler]
 pub async fn submit(
-    State(state): State<Arc<RwLock<Transactor>>>, 
+    State(state): State<Arc<RwLock<Transactor>>>,
     Query(params): Query<Params>,
-) 
--> impl IntoResponse 
-{
+) -> impl IntoResponse {
     println!("{state:?}");
     println!("{params:?}");
     (StatusCode::OK, "asdf")

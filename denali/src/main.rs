@@ -10,15 +10,18 @@ use std::sync::Arc;
 //     Router,
 // };
 use denali::{
+    Message,
+    Transactor,
     // web::task,
-    plugin::Plugin, Message, Transactor, web::{
+    plugin::Plugin,
+    web::{
         task::web,
-        // chain_height, 
+        // chain_height,
         // endpoints::{
         //     root,
         // submit
         // }
-    }
+    },
 };
 use tokio::{
     join, spawn,
@@ -44,7 +47,7 @@ async fn main() {
     //     let contract_map = contract_map.clone();
     //     async move {
     //         // loop {
-    //             Plugin::monitor(contract_map);   
+    //             Plugin::monitor(contract_map);
     //         // }
     // }});
 
@@ -102,36 +105,40 @@ async fn main() {
         let contract_map = contract_map.clone();
         let transactor = transactor.clone();
         async move {
-        println!("notified");
+            println!("notified");
 
-        while let Some(messages) = rx_msg_queue.recv().await {
-            for message in messages {
-                // println!("transactions: {message:?}");
-                let name = message.0;
-                // println!("{name:?}");
-                let payload: String = message.1.into();
-                // let program = contract_map;
-                let program = contract_map.read().await;
-                let program = program.get(name).unwrap().thing.as_ref();
-                let message = Message {
-                    program,
-                    payload: payload.clone(),
-                };
-                let messages = vec![message];
-                let _res = transactor
-                    .clone()
-                    .write()
-                    .await
-                    .create_new_block(messages)
-                    .await;
+            while let Some(messages) = rx_msg_queue.recv().await {
+                for message in messages {
+                    // println!("transactions: {message:?}");
+                    let name = message.0;
+                    // println!("{name:?}");
+                    let payload: String = message.1.into();
+                    // let program = contract_map;
+                    let program = contract_map.read().await;
+                    let program = program.get(name).unwrap().thing.as_ref();
+                    let message = Message {
+                        program,
+                        payload: payload.clone(),
+                    };
+                    let messages = vec![message];
+                    let _res = transactor
+                        .clone()
+                        .write()
+                        .await
+                        .create_new_block(messages)
+                        .await;
+                }
             }
         }
-    }});
+    });
 
     let web_thread = spawn(web(transactor.clone())).await;
     let _tasks = [web_thread];
 
-    let _res = join!(listener_thread, processor_thread, receiver_thread, 
-        // scanner_thread, 
+    let _res = join!(
+        listener_thread,
+        processor_thread,
+        receiver_thread,
+        // scanner_thread,
     );
 }

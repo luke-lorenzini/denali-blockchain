@@ -1,6 +1,11 @@
-use std::{collections::HashMap, ffi::c_void, sync::{
-    // mpsc::channel, 
-    Arc}};
+use std::{
+    collections::HashMap,
+    ffi::c_void,
+    sync::{
+        // mpsc::channel,
+        Arc,
+    },
+};
 
 use libloading::Library;
 // use notify::{Config, RecommendedWatcher, RecursiveMode, Watcher};
