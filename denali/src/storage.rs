@@ -42,8 +42,8 @@ impl State {
         State(inner)
     }
 
-    fn _exists(&self, address: String) -> bool {
-        self.0.contains_key(&address)
+    fn _exists(&self, address: &str) -> bool {
+        self.0.contains_key(address)
     }
 
     #[must_use]

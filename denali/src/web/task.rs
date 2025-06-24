@@ -16,7 +16,7 @@ use crate::{
 pub async fn web(transactor: Arc<RwLock<Transactor>>) {
     let app = Router::new()
         .route("/", get(root))
-        .route("/chain_height", get(chain_height))
+        .route("/chain-height", get(chain_height))
         .route("/submit", post(submit))
         .with_state(transactor);
 

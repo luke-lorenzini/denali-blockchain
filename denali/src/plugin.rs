@@ -25,6 +25,7 @@ pub struct Plugin {
 }
 
 impl Plugin {
+    #[must_use]
     pub fn new(library: Library, program: Box<dyn Thing>) -> Self {
         Plugin {
             _library: library,
@@ -41,6 +42,7 @@ impl Plugin {
     //     println!("Found a thing");
     // }
 
+    #[must_use]
     pub fn stuff() -> Arc<RwLock<HashMap<String, Plugin>>> {
         let mut contract_map = HashMap::new();
         // load vote

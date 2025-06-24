@@ -6,13 +6,16 @@ use std::{
 use hex::encode;
 use serde_json::Result;
 use sha2::{Digest, Sha256};
+use tokio::sync::{RwLock, mpsc::Receiver};
 
 use crate::{
     chain::Chain,
+    plugin::Plugin,
     types::{H256, Thing},
 };
 
 mod chain;
+pub mod messaging;
 pub mod plugin;
 pub mod storage;
 pub mod types;
@@ -114,6 +117,43 @@ impl Transactor {
             .add_next_block(merkle_tree_root.try_into().unwrap(), thing);
         true
     }
+}
+
+pub async fn processor(
+    contract_map: Arc<RwLock<HashMap<String, Plugin>>>,
+    transactor: Arc<RwLock<Transactor>>,
+    mut rx_msg_queue: Receiver<Vec<(&'static str, &'static str)>>,
+) {
+    // let processor_thread = spawn({
+    // let contract_map = contract_map.clone();
+    // let transactor = transactor.clone();
+    // async move {
+    println!("notified");
+
+    while let Some(messages) = rx_msg_queue.recv().await {
+        for message in messages {
+            // println!("transactions: {message:?}");
+            let name = message.0;
+            // println!("{name:?}");
+            let payload: String = message.1.into();
+            // let program = contract_map;
+            let program = contract_map.read().await;
+            let program = program.get(name).unwrap().thing.as_ref();
+            let message = Message {
+                program,
+                payload: payload.clone(),
+            };
+            let messages = vec![message];
+            let _res = transactor
+                .clone()
+                .write()
+                .await
+                .create_new_block(messages)
+                .await;
+        }
+    }
+    // }
+    // });
 }
 
 #[cfg(test)]
