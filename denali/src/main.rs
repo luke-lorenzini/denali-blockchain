@@ -3,17 +3,22 @@ use std::sync::Arc;
 // use axum::{
 //     routing::{
 //         get,
-//         // post
+//         post
 //     },
 //     // http::StatusCode,
 //     // Json,
 //     Router,
 // };
 use denali::{
-    Message,
-    Transactor,
-    // web::{chain_height, root}
-    plugin::Plugin,
+    // web::task,
+    plugin::Plugin, Message, Transactor, web::{
+        task::web,
+        // chain_height, 
+        // endpoints::{
+        //     root,
+        // submit
+        // }
+    }
 };
 use tokio::{
     join, spawn,
@@ -34,6 +39,15 @@ async fn main() {
     let (tx_msg_queue, mut rx_msg_queue) = channel(100);
 
     let mut flag = 0;
+
+    // let scanner_thread = spawn({
+    //     let contract_map = contract_map.clone();
+    //     async move {
+    //         // loop {
+    //             Plugin::monitor(contract_map);   
+    //         // }
+    // }});
+
     let listener_thread = spawn(async move {
         loop {
             sleep(Duration::from_millis(100)).await;
@@ -84,7 +98,10 @@ async fn main() {
         }
     });
 
-    let processor_thread = spawn(async move {
+    let processor_thread = spawn({
+        let contract_map = contract_map.clone();
+        let transactor = transactor.clone();
+        async move {
         println!("notified");
 
         while let Some(messages) = rx_msg_queue.recv().await {
@@ -93,7 +110,8 @@ async fn main() {
                 let name = message.0;
                 // println!("{name:?}");
                 let payload: String = message.1.into();
-                let program = contract_map.clone();
+                // let program = contract_map;
+                let program = contract_map.read().await;
                 let program = program.get(name).unwrap().thing.as_ref();
                 let message = Message {
                     program,
@@ -108,19 +126,12 @@ async fn main() {
                     .await;
             }
         }
-    });
+    }});
 
-    // let web_thread = spawn(async move {
-    //     // let transactor = Arc::new(RwLock::new(Transactor::new()));
-    //     let app = Router::new()
-    //     // `GET /` goes to `root`
-    //     .route("/", get(root))
-    //     // .route("/chain_height", get(chain_height))
-    //     .with_state(transactor.clone());
+    let web_thread = spawn(web(transactor.clone())).await;
+    let _tasks = [web_thread];
 
-    //     let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await.unwrap();
-    //     axum::serve(listener, app).await.unwrap();
-    // });
-
-    let _res = join!(receiver_thread, listener_thread, processor_thread);
+    let _res = join!(listener_thread, processor_thread, receiver_thread, 
+        // scanner_thread, 
+    );
 }

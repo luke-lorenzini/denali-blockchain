@@ -16,7 +16,7 @@ mod chain;
 pub mod plugin;
 pub mod storage;
 pub mod types;
-// pub mod web;
+pub mod web;
 
 #[derive(Clone)]
 pub struct Message<T> {
@@ -24,6 +24,7 @@ pub struct Message<T> {
     pub payload: String,
 }
 
+#[derive(Debug)]
 pub struct Transactor {
     chain: Chain,
 }

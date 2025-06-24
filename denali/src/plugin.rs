@@ -1,6 +1,10 @@
-use std::{collections::HashMap, ffi::c_void, sync::Arc};
+use std::{collections::HashMap, ffi::c_void, sync::{
+    // mpsc::channel, 
+    Arc}};
 
 use libloading::Library;
+// use notify::{Config, RecommendedWatcher, RecursiveMode, Watcher};
+use tokio::sync::RwLock;
 
 use crate::Thing;
 
@@ -23,7 +27,16 @@ impl Plugin {
         }
     }
 
-    pub fn stuff() -> Arc<HashMap<String, Plugin>> {
+    // pub fn monitor(_programs: Arc<RwLock<HashMap<String, Plugin>>>) {
+    //     let path = "";
+    //     let (tx, _rx) = channel();
+    //     let mut watcher = RecommendedWatcher::new(tx, Config::default()).unwrap();
+    //     watcher.watch(path.as_ref(), RecursiveMode::Recursive).unwrap();
+
+    //     println!("Found a thing");
+    // }
+
+    pub fn stuff() -> Arc<RwLock<HashMap<String, Plugin>>> {
         let mut contract_map = HashMap::new();
         // load vote
         unsafe {
@@ -94,6 +107,6 @@ impl Plugin {
             println!("{v:?}");
         }
 
-        Arc::new(contract_map)
+        Arc::new(RwLock::new(contract_map))
     }
 }
