@@ -122,26 +122,17 @@ impl Transactor {
 pub async fn processor(
     contract_map: Arc<RwLock<HashMap<String, Plugin>>>,
     transactor: Arc<RwLock<Transactor>>,
-    mut rx_msg_queue: Receiver<Vec<(&'static str, &'static str)>>,
+    mut rx_msg_queue: Receiver<Vec<(String, String)>>,
 ) {
-    // let processor_thread = spawn({
-    // let contract_map = contract_map.clone();
-    // let transactor = transactor.clone();
-    // async move {
     println!("notified");
 
     while let Some(messages) = rx_msg_queue.recv().await {
         for message in messages {
-            // println!("transactions: {message:?}");
-            let name = message.0;
-            // println!("{name:?}");
-            let payload: String = message.1.into();
-            // let program = contract_map;
             let program = contract_map.read().await;
-            let program = program.get(name).unwrap().thing.as_ref();
+            let program = program.get(message.0.as_str()).unwrap().thing.as_ref();
             let message = Message {
                 program,
-                payload: payload.clone(),
+                payload: message.1,
             };
             let messages = vec![message];
             let _res = transactor
@@ -152,8 +143,6 @@ pub async fn processor(
                 .await;
         }
     }
-    // }
-    // });
 }
 
 #[cfg(test)]

@@ -3,7 +3,8 @@ use std::sync::{Arc, Mutex};
 use async_trait::async_trait;
 use derive_more::AsRef;
 use hex::decode;
-use serde_json::Result;
+use serde::{Deserialize, Serialize};
+use serde_json::{Result, Value};
 // use tokio::sync::Mutex;
 
 use crate::storage::State;
@@ -47,6 +48,12 @@ pub trait Thing: Send + Sync {
     fn name(&self) -> &'static str;
     fn verify(&self) -> Result<bool>;
     async fn run(&self, payload: &str, state: Arc<Mutex<State>>) -> Result<H256>;
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct Params {
+    pub program: String,
+    pub payload: Value,
 }
 
 #[cfg(test)]

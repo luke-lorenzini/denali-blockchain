@@ -1,40 +1,48 @@
-use std::sync::Arc;
-
 use axum::{
-    extract::{Query, State},
+    extract::{Json, Query, State},
     http::StatusCode,
     response::IntoResponse,
 };
-use serde::Deserialize;
-use tokio::sync::RwLock;
 
-use crate::Transactor;
+use crate::{types::Params, web::task::WebState};
 
-#[derive(Debug, Deserialize)]
-pub struct Params {
-    _program: String,
-    _payload: Payload,
+pub async fn root() -> impl IntoResponse {
+    "Hello, Denali!"
 }
 
-#[derive(Debug, Deserialize)]
-struct Payload {
-    _candidate: String,
-}
-
-pub async fn root() -> &'static str {
-    "Hello, World!"
-}
-
-pub async fn chain_height(State(state): State<Arc<RwLock<Transactor>>>) -> impl IntoResponse {
-    let height = state.read().await.chain.get_chain_height().to_string();
+pub async fn chain_height(State(state): State<WebState>) -> impl IntoResponse {
+    let height = state
+        .transactor
+        .read()
+        .await
+        .chain
+        .get_chain_height()
+        .to_string();
     (StatusCode::OK, height)
 }
 
 pub async fn submit(
-    State(state): State<Arc<RwLock<Transactor>>>,
-    Query(params): Query<Params>,
+    State(state): State<WebState>,
+    Json(payload): Json<Params>,
 ) -> impl IntoResponse {
-    println!("{state:?}");
-    println!("{params:?}");
-    (StatusCode::OK, "asdf")
+    // println!("{state:?}");
+    // println!("{payload:?}");
+    let program = payload.program.to_string();
+    let payload = serde_json::to_string(&payload.payload).unwrap();
+    // let payload = r#"
+    //             {
+    //                 "candidate": "candidate1"
+    //             }"#
+    // .into();
+
+    let _res = state.tx.send((program, payload)).await;
+    (StatusCode::OK, "state")
+}
+
+#[derive(Debug)]
+pub struct QueryParams {}
+
+pub async fn get_something(Query(params): Query<QueryParams>) -> impl IntoResponse {
+    println!("{:?}", params);
+    "todo!()"
 }
