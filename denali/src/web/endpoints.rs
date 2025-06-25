@@ -3,6 +3,7 @@ use axum::{
     http::StatusCode,
     response::IntoResponse,
 };
+use serde::Deserialize;
 
 use crate::{types::Params, web::task::WebState};
 
@@ -39,10 +40,10 @@ pub async fn submit(
     (StatusCode::OK, "state")
 }
 
-#[derive(Debug)]
+#[derive(Debug, Deserialize)]
 pub struct QueryParams {}
 
 pub async fn get_something(Query(params): Query<QueryParams>) -> impl IntoResponse {
-    println!("{:?}", params);
+    println!("{params:?}");
     "todo!()"
 }

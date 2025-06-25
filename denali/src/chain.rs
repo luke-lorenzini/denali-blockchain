@@ -113,7 +113,7 @@ impl Chain {
         let genesis_block = vec![Block::genesis()];
         let state = Arc::new(Mutex::new(State::new()));
         Self {
-            count: genesis_block.len() as u32,
+            count: u32::try_from(genesis_block.len()).unwrap(),
             blocks: genesis_block,
             state,
         }
@@ -131,7 +131,7 @@ impl Chain {
         let block = Block::new(self.get_block_hash(), merkle_tree_root, transactions);
         println!("block: {block:?}");
         self.blocks.push(block);
-        self.count = self.blocks.len() as u32;
+        self.count = u32::try_from(self.blocks.len()).unwrap();
         true
     }
 

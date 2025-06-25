@@ -10,7 +10,7 @@ use tokio::sync::{RwLock, mpsc::Sender};
 
 use crate::{
     Transactor,
-    web::endpoints::{chain_height, root, submit},
+    web::endpoints::{chain_height, get_something, root, submit},
 };
 
 #[derive(Clone, Debug)]
@@ -25,6 +25,7 @@ pub async fn web(tx: Sender<(String, String)>, transactor: Arc<RwLock<Transactor
         .route("/", get(root))
         .route("/chain-height", get(chain_height))
         .route("/submit", post(submit))
+        .route("/get-something", get(get_something))
         .with_state(web_state);
 
     let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await.unwrap();

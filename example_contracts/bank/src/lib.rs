@@ -65,7 +65,7 @@ impl Bank {
         let mut local_accounts = HashMap::new();
 
         for (account_number, account) in accounts.into_iter().enumerate() {
-            local_accounts.insert(account_number as u32, account);
+            local_accounts.insert(u32::try_from(account_number).unwrap(), account);
         }
 
         Self {
