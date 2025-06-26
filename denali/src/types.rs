@@ -50,6 +50,13 @@ pub trait Thing: Send + Sync {
     async fn run(&self, payload: &str, state: Arc<Mutex<State>>) -> Result<H256>;
 }
 
+use std::fmt::Debug;
+impl Debug for dyn Thing {
+    fn fmt(&self, _f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        todo!()
+    }
+}
+
 #[derive(Debug, Deserialize, Serialize)]
 pub struct Params {
     pub program: String,

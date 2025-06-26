@@ -53,6 +53,7 @@ pub struct RawTraitObject {
     pub vtable_ptr: *mut c_void,
 }
 
+#[derive(Debug)]
 pub struct Plugin {
     _library: Library,
     pub thing: Box<dyn Thing>,
@@ -67,7 +68,6 @@ impl Plugin {
         }
     }
 
-    #[must_use]
     pub async fn stuff(name: &str, path: &Path, contract_map: Arc<RwLock<HashMap<String, Plugin>>>) {
         // let new_plugin_found = false;
         // if new_plugin_found {

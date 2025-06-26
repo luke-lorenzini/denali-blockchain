@@ -5,7 +5,7 @@ use axum::{
 };
 use serde::Deserialize;
 
-use crate::{types::Params, web::task::WebState};
+use crate::{types::Params, web::WebState};
 
 pub async fn root() -> impl IntoResponse {
     "Hello, Denali!"
@@ -29,15 +29,23 @@ pub async fn submit(
     // println!("{state:?}");
     // println!("{payload:?}");
     let program = payload.program.to_string();
-    let payload = serde_json::to_string(&payload.payload).unwrap();
-    // let payload = r#"
-    //             {
-    //                 "candidate": "candidate1"
-    //             }"#
-    // .into();
-
-    let _res = state.tx.send((program, payload)).await;
-    (StatusCode::OK, "state")
+    
+    let xxx = state.contract_map.read().await;
+    match xxx.contains_key(&program) {
+        true => {
+            let payload = serde_json::to_string(&payload.payload).unwrap();
+            // let payload = r#"
+            //             {
+            //                 "candidate": "candidate1"
+            //             }"#
+            // .into();
+            let _res = state.tx.send((program, payload)).await;
+            (StatusCode::OK, "plugin found")
+        }
+        false => {
+            (StatusCode::BAD_REQUEST, "plugin not found")
+        }
+    }
 }
 
 #[derive(Debug, Deserialize)]
