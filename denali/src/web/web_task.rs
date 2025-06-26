@@ -19,7 +19,7 @@ pub struct WebState {
     pub tx: Sender<(String, String)>,
 }
 
-pub async fn web(tx: Sender<(String, String)>, transactor: Arc<RwLock<Transactor>>) {
+pub async fn web_task(tx: Sender<(String, String)>, transactor: Arc<RwLock<Transactor>>) {
     let web_state = WebState { transactor, tx };
     let app = Router::new()
         .route("/", get(root))
