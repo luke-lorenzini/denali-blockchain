@@ -6,7 +6,7 @@ use std::{
 // use tokio::sync::Mutex;
 use async_trait::async_trait;
 use denali::{
-    plugin::RawTraitObject,
+    plugins::RawTraitObject,
     storage::State,
     types::{H256, Thing},
 };

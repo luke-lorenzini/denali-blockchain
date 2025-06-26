@@ -10,13 +10,13 @@ use tokio::sync::{RwLock, mpsc::Receiver};
 
 use crate::{
     chain::Chain,
-    plugin::Plugin,
+    plugins::Plugin,
     types::{H256, Thing},
 };
 
 mod chain;
 pub mod messaging;
-pub mod plugin;
+pub mod plugins;
 pub mod storage;
 pub mod types;
 pub mod web;
