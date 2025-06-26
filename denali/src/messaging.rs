@@ -29,54 +29,50 @@ use tokio::{
         // RwLock
     },
     // task::JoinHandle,
-    // time::{Duration, sleep},
+    time::{Duration, sleep},
 };
 
-// pub async fn listener(tx: Sender<(String, String)>) {
-//     // let (tx, mut _rx) = channel(100);
+pub async fn message_generator_task(tx: Sender<(String, String)>) {
+    let mut flag = 0;
 
-//     let mut flag = 0;
+    loop {
+        sleep(Duration::from_millis(100)).await;
 
-//     // let listener_thread = spawn(async move {
-//     loop {
-//         sleep(Duration::from_millis(100)).await;
+        let payload;
+        let program;
+        if flag == 0 {
+            flag = 1;
+            // A fake - working
+            payload = r#"
+                {
+                    "fake": 0
+                }"#;
+            program = "fake";
+        } else if flag == 1 {
+            flag = 2;
+            // A bank
+            payload = r#"
+                {
+                    "payer": 0,
+                    "payee": 1,
+                    "amount": 10.0
+                }"#;
+            program = "bank";
+        } else {
+            flag = 0;
+            // A vote - working
+            payload = r#"
+                {
+                    "candidate": "candidate1"
+                }"#;
+            program = "vote";
+        }
 
-//         let payload;
-//         let program;
-//         if flag == 0 {
-//             flag = 1;
-//             // A fake - working
-//             payload = r#"
-//                 {
-//                     "fake": 0
-//                 }"#;
-//             program = "fake";
-//         } else if flag == 1 {
-//             flag = 2;
-//             // A bank
-//             payload = r#"
-//                 {
-//                     "payer": 0,
-//                     "payee": 1,
-//                     "amount": 10.0
-//                 }"#;
-//             program = "bank";
-//         } else {
-//             flag = 0;
-//             // A vote - working
-//             payload = r#"
-//                 {
-//                     "candidate": "candidate1"
-//                 }"#;
-//             program = "vote";
-//         }
+        tx.send((program.into(), payload.into())).await.unwrap();
+    }
+}
 
-//         tx.send((program.into(), payload.into())).await.unwrap();
-//     }
-//     // });
-// }
-
-pub async fn receiver(
+pub async fn receiver_task(
     tx_msg_queue: Sender<Vec<(String, String)>>,
     mut rx: Receiver<(String, String)>,
 ) {

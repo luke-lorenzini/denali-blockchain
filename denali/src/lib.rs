@@ -119,7 +119,7 @@ impl Transactor {
     }
 }
 
-pub async fn processor(
+pub async fn processor_task(
     contract_map: Arc<RwLock<HashMap<String, Plugin>>>,
     transactor: Arc<RwLock<Transactor>>,
     mut rx_msg_queue: Receiver<Vec<(String, String)>>,
@@ -129,6 +129,7 @@ pub async fn processor(
     while let Some(messages) = rx_msg_queue.recv().await {
         for message in messages {
             let program = contract_map.read().await;
+            println!("{:?}", message.0);
             let program = program.get(message.0.as_str()).unwrap().thing.as_ref();
             let message = Message {
                 program,
