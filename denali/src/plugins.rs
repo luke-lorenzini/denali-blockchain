@@ -1,5 +1,5 @@
 use std::{
-    collections::HashMap, ffi::c_void, path::Path, sync::{ Arc}
+    collections::HashMap, ffi::c_void, path::{Path, PathBuf}, sync::Arc
 };
 
 use libloading::Library;
@@ -68,9 +68,7 @@ impl Plugin {
         }
     }
 
-    pub async fn stuff(name: &str, path: &Path, contract_map: Arc<RwLock<HashMap<String, Plugin>>>) {
-        // let new_plugin_found = false;
-        // if new_plugin_found {
+    async fn _stuff(name: &str, path: &Path, contract_map: Arc<RwLock<HashMap<String, Plugin>>>) {
             unsafe {
                 let lib = libloading::Library::new(path)
                     .unwrap();
@@ -88,6 +86,26 @@ impl Plugin {
 
             let v = contract_map.read().await.get(name).unwrap().thing.verify();
             println!("Result of verification for {name:?}: {v:?}");
-        // }
+    }
+
+    pub async fn build(
+        // path: &Path
+        path: PathBuf
+    ) -> (&'static str, Plugin) {
+        unsafe {
+                let lib = libloading::Library::new(path)
+                    .unwrap();
+                let func: libloading::Symbol<Contract> = lib.get(b"create_thing").unwrap();
+                let xxx = func();
+
+                let boxed_raw_trait_object = Box::from_raw(xxx.cast::<RawTraitObject>());
+                let raw_trait_object = *boxed_raw_trait_object;
+                let raw_fat_ptr: *mut dyn Thing = std::mem::transmute(raw_trait_object);
+                let owned_plugin_box: Box<dyn Thing> = Box::from_raw(raw_fat_ptr);
+
+                let name = owned_plugin_box.name();
+
+                (name, Plugin::new(lib, owned_plugin_box)            )
+            }
     }
 }

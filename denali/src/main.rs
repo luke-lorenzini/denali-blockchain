@@ -1,43 +1,61 @@
 use std::{collections::HashMap, sync::Arc};
 
 use denali::{
-    messaging::{receiver_task, listener_task}, plugins::{plugin_task::plugin_scanner_task, 
-        Plugin
+     messaging::{receiver_task, 
+        // message_generator_task
+    }, plugins::{
+        plugin_task::plugin_scanner_task, 
+        // Plugin,
+        plugin_task::plugin_builder,
     }, processor_task, web::web_task::web_task, Transactor
 };
 use tokio::{
-    join, spawn,
-    sync::{RwLock, mpsc::channel},
+    join, 
+    spawn,
+    sync::{mpsc::{channel, 
+        // Receiver
+        }, 
+        RwLock},
 };
+
+// use macros::HelloMacro;
+// use denali::types::HelloMacro;
 
 #[tokio::main]
 async fn main() {
-    println!("Hello, denali");
-
-    let contract_map = Plugin::stuff();
     let transactor = Arc::new(RwLock::new(Transactor::new()));
     let (tx, rx) = channel(100);
     let (tx_msg_queue, rx_msg_queue) = channel(100);
+    let contract_map = Arc::new(RwLock::new(HashMap::new()));
+    let (plugin_tx, plugin_rx) = channel(100);
 
-    // let scanner_thread = spawn({
-    //     let contract_map = contract_map.clone();
-    //     async move {
-    //         // loop {
-    //             Plugin::monitor(contract_map);
-    //         // }
-    // }});
+    let path = "./plugins";
 
-    let listener_thread = spawn(listener(tx));
-    let receiver_thread = spawn(receiver(tx_msg_queue, rx));
-    let processor_thread = spawn(processor(contract_map, transactor.clone(), rx_msg_queue));
-    let web_thread = spawn(web(transactor));
+    // let vote_name = "vote";
+    // let fake_name = "fake";
+    // let bank_name = "bank";
+    // let vote_path = "/home/luke/repos/denali/target/debug/libvote.so";
+    // let fake_path = "/home/luke/repos/denali/target/debug/libfake.so";
+    // let bank_path = "/home/luke/repos/denali/target/debug/libbank.so";
+    // let _ = Plugin::stuff(vote_name, vote_path.as_ref(), contract_map.clone()).await;
+    // let _ = Plugin::stuff(fake_name, fake_path.as_ref(), contract_map.clone()).await;
+    // let _ = Plugin::stuff(bank_name, bank_path.as_ref(), contract_map.clone()).await;
+
+    let plugin_scanner_task = spawn(plugin_scanner_task(path.as_ref(), plugin_tx));
+    let plugger_builder_task = spawn(plugin_builder(contract_map. clone() ,plugin_rx));
+    // let message_generator_task = spawn(message_generator_task(tx.clone()));
+    let receiver_task = spawn(receiver_task(tx_msg_queue, rx));
+    let processor_task = spawn(processor_task(contract_map.clone(), transactor.clone(), rx_msg_queue));
+    let web_task = spawn(web_task(tx, transactor.clone(), contract_map.clone()));
+    
 
     let _res = join!(
-        listener_thread,
-        processor_thread,
-        receiver_thread,
-        // scanner_thread,
-        web_thread
+        // message_generator_task,
+        processor_task,
+        receiver_task,
+        plugin_scanner_task,
+        web_task,
+        plugger_builder_task
     );
 
     // let handles = spawn_all_tasks(
