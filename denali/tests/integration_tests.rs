@@ -1,4 +1,4 @@
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 
 use async_trait::async_trait;
 use denali::{
@@ -7,6 +7,7 @@ use denali::{
     types::{H256, Thing},
 };
 use serde::Deserialize;
+use tokio::sync::Mutex;
 
 #[tokio::test]
 async fn test_modify_single_value() {
@@ -125,7 +126,11 @@ impl Thing for FakeProgram {
         let xxx: Payload = serde_json::from_slice(payload.as_bytes()).unwrap();
         println!("{xxx:?}");
 
-        state.lock().unwrap().set_value("fake_program", 0);
+        state
+            .lock()
+            .await
+            // .unwrap()
+            .set_value("fake_program", 0);
         println!("{state:?}");
 
         Ok(H256::default())

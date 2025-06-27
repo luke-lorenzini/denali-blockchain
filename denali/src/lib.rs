@@ -1,12 +1,9 @@
-use std::{
-    collections::HashMap,
-    sync::{Arc, Mutex},
-};
+use std::{collections::HashMap, sync::Arc};
 
 use hex::encode;
 use serde_json::Result;
 use sha2::{Digest, Sha256};
-use tokio::sync::{RwLock, mpsc::Receiver};
+use tokio::sync::{Mutex, RwLock, mpsc::Receiver};
 
 use crate::{
     chain::Chain,
@@ -85,7 +82,8 @@ impl Transactor {
             let tx = self.process_transaction(transaction.clone()).await.unwrap();
             transactions_map
                 .lock()
-                .unwrap()
+                // .unwrap()
+                .await
                 .insert(tx.clone(), transaction.payload);
             // hasher.update(tx.as_ref());
             res.push(tx);
@@ -112,7 +110,7 @@ impl Transactor {
         let res = hasher.finalize();
         let merkle_tree_root = encode(res);
         // let merkle_tree_root = self.process_transactions(messages);
-        let thing = Arc::try_unwrap(transactions).unwrap().into_inner().unwrap();
+        let thing = Arc::try_unwrap(transactions).unwrap().into_inner();
         self.chain
             .add_next_block(merkle_tree_root.try_into().unwrap(), thing);
         true

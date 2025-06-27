@@ -1,6 +1,5 @@
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 
-// use tokio::sync::Mutex;
 use async_trait::async_trait;
 use denali::{
     storage::State,
@@ -9,6 +8,7 @@ use denali::{
 use macros::generate_create_thing;
 use serde::Deserialize;
 use serde_json::Result;
+use tokio::sync::Mutex;
 
 const CANDIDATES: u32 = 3;
 #[generate_create_thing(args(CANDIDATES))]
@@ -55,14 +55,14 @@ async fn vote_program(payload: &str, state: Arc<Mutex<State>>) -> Result<()> {
 
     let current_count = state
         .lock()
-        // .await
-        .unwrap()
+        .await
+        // .unwrap()
         .get_value(&payload.candidate);
     println!("{current_count:?}");
     state
         .lock()
-        // .await
-        .unwrap()
+        .await
+        // .unwrap()
         .set_value(&payload.candidate, current_count + 1);
 
     Ok(())

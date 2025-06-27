@@ -1,12 +1,12 @@
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 
-// use tokio::sync::Mutex;
 use async_trait::async_trait;
 use denali::{
     storage::State,
     types::{H256, Thing},
 };
 use macros::generate_create_thing;
+use tokio::sync::Mutex;
 // use hex::encode;
 // use log::debug;
 // use serde::Deserialize;
@@ -33,8 +33,8 @@ impl Thing for Fake {
         println!("run fake");
         let s = state
             .lock()
-            // .await
-            .unwrap()
+            .await
+            // .unwrap()
             .get_value("test");
         println!("{s:?}");
         // let res = encode("test");

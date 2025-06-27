@@ -1,11 +1,11 @@
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 
 use async_trait::async_trait;
 use derive_more::AsRef;
 use hex::decode;
 use serde::{Deserialize, Serialize};
 use serde_json::{Result, Value};
-// use tokio::sync::Mutex;
+use tokio::sync::Mutex;
 
 use crate::storage::State;
 

@@ -1,11 +1,8 @@
-use std::{
-    collections::HashMap,
-    sync::{Arc, Mutex},
-};
+use std::{collections::HashMap, sync::Arc};
 
-// use tokio::sync::Mutex;
 use hex::encode;
 use sha2::{Digest, Sha256};
+use tokio::sync::Mutex;
 
 use crate::{storage::State, types::H256};
 

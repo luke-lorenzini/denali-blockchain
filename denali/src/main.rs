@@ -6,27 +6,14 @@ use denali::{
         receiver_task,
         // message_generator_task
     },
-    plugins::{
-        // Plugin,
-        plugin_task::plugin_builder,
-        plugin_task::plugin_scanner_task,
-    },
+    plugins::{plugin_task::plugin_builder, plugin_task::plugin_scanner_task},
     processor_task,
     web::web_task::web_task,
 };
 use tokio::{
     join, spawn,
-    sync::{
-        RwLock,
-        mpsc::{
-            channel,
-            // Receiver
-        },
-    },
+    sync::{RwLock, mpsc::channel},
 };
-
-// use macros::HelloMacro;
-// use denali::types::HelloMacro;
 
 #[tokio::main]
 async fn main() {
