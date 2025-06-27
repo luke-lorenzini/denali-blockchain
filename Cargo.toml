@@ -11,11 +11,11 @@ members = [
 async-trait = "0.1.88"
 axum = "0.8.4"
 derive_more = { version = "2.0.1", features = ["as_ref"] }
-# futures = "0.3.31"
+futures = "0.3.31"
 hex = "0.4.3"
 libloading = "0.8.8"
 log = "0.4.27"
-# notify = "8.0.0"
+notify = "8.0.0"
 rocksdb = "0.23.0"
 rust_decimal = { version = "1.37.1", features = ["macros"] }
 serde = { version = "1.0.219", features = ["derive"] }
