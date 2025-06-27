@@ -1,45 +1,23 @@
 use std::{
-    ffi::c_void,
-    sync::{Arc, Mutex},
+    sync::{Arc, 
+        Mutex
+    },
 };
 
 // use tokio::sync::Mutex;
 use async_trait::async_trait;
 use denali::{
-    plugins::RawTraitObject,
-    storage::State,
-    types::{H256, Thing},
+    storage::State, types::{Thing, H256}, 
 };
-// use log::debug;
 use serde::Deserialize;
 use serde_json::Result;
+use macros::{
+    generate_create_thing};
 
-// #[unsafe(no_mangle)]
-// pub extern "C" fn create_thing() -> *mut dyn Thing {
-//     println!("Creating vote");
-//     let vote = Vote::new(5);
-//     let boxed_vote = Box::new(vote);
-//     Box::into_raw(boxed_vote)
-// }
-
-#[unsafe(no_mangle)]
-pub extern "C" fn create_thing() -> *mut c_void {
-    println!("Creating vote");
-    let boxed_vote: Box<dyn Thing> = Box::new(Vote::new(5));
-    let raw_fat_ptr = Box::into_raw(boxed_vote);
-    unsafe {
-        let (data_ptr, vtable_ptr): (*mut c_void, *mut c_void) = std::mem::transmute(raw_fat_ptr);
-
-        let boxed_raw_trait_object = Box::new(RawTraitObject {
-            data_ptr,
-            vtable_ptr,
-        });
-        Box::into_raw(boxed_raw_trait_object).cast::<c_void>()
-    }
-}
-
-#[derive(Clone)]
-pub struct Vote {
+const CANDIDATES: u32 = 3;
+#[generate_create_thing(args(CANDIDATES))]
+#[derive(Clone, Debug)]
+struct Vote {
     _votes: Vec<u64>,
 }
 
@@ -51,7 +29,7 @@ impl Thing for Vote {
 
     async fn run(&self, payload: &str, state: Arc<Mutex<State>>) -> Result<H256> {
         println!("vote run");
-        vote_program(payload, state).unwrap();
+        vote_program(payload, state).await.unwrap();
         Ok(H256::default())
     }
 
@@ -63,14 +41,14 @@ impl Thing for Vote {
 
 impl Vote {
     #[must_use]
-    pub fn new(number_of_candidates: u32) -> Self {
+    fn new(number_of_candidates: u32) -> Self {
         let votes = vec![0; number_of_candidates as usize];
         println!("VOTE!");
         Self { _votes: votes }
     }
 }
 
-fn vote_program(payload: &str, state: Arc<Mutex<State>>) -> Result<()> {
+async fn vote_program(payload: &str, state: Arc<Mutex<State>>) -> Result<()> {
     #[derive(Debug, Deserialize)]
     struct Ballot {
         candidate: String,
@@ -79,10 +57,14 @@ fn vote_program(payload: &str, state: Arc<Mutex<State>>) -> Result<()> {
     let payload: Ballot = serde_json::from_str(payload)?;
     println!("payload: {payload:?}");
 
-    let current_count = state.lock().unwrap().get_value(&payload.candidate);
+    let current_count = state.lock()
+    // .await
+    .unwrap()
+    .get_value(&payload.candidate);
     println!("{current_count:?}");
     state
         .lock()
+        // .await
         .unwrap()
         .set_value(&payload.candidate, current_count + 1);
 

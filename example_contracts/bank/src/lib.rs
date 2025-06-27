@@ -1,44 +1,22 @@
 use std::{
     collections::HashMap,
-    ffi::c_void,
-    sync::{Arc, Mutex},
+    sync::{Arc, 
+        Mutex
+    },
 };
 
-// use tokio::sync::Mutex;
 use async_trait::async_trait;
 use denali::{
-    plugins::RawTraitObject,
     storage::State,
     types::{H256, Thing},
 };
 use rust_decimal::{Decimal, dec};
 use serde::Deserialize;
 use serde_json::Result;
+use macros::{
+    generate_create_thing};
 
-// #[unsafe(no_mangle)]
-// pub extern "C" fn create_thing() -> *mut dyn Thing {
-//     println!("Creating bank");
-//     let bank = Bank::new(vec![]);
-//     let boxed_bank = Box::new(bank);
-//     Box::into_raw(boxed_bank)
-// }
-
-#[unsafe(no_mangle)]
-pub extern "C" fn create_thing() -> *mut c_void {
-    println!("Creating bank");
-    let boxed_bank: Box<dyn Thing> = Box::new(Bank::new(vec![]));
-    let raw_fat_ptr = Box::into_raw(boxed_bank);
-    unsafe {
-        let (data_ptr, vtable_ptr): (*mut c_void, *mut c_void) = std::mem::transmute(raw_fat_ptr);
-
-        let boxed_raw_trait_object = Box::new(RawTraitObject {
-            data_ptr,
-            vtable_ptr,
-        });
-        Box::into_raw(boxed_raw_trait_object).cast::<c_void>()
-    }
-}
-
+#[generate_create_thing(args(vec![]))]
 #[derive(Debug)]
 pub struct Bank {
     accounts: HashMap<u32, Account>,
