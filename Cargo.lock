@@ -354,7 +354,6 @@ dependencies = [
  "hex",
  "libloading",
  "log",
- "macros",
  "notify",
  "rocksdb",
  "serde",
@@ -900,8 +899,10 @@ dependencies = [
 name = "macros"
 version = "0.1.0"
 dependencies = [
+ "denali",
  "quote",
  "syn 2.0.104",
+ "tokio",
 ]
 
 [[package]]
