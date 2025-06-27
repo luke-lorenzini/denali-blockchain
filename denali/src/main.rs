@@ -1,21 +1,28 @@
 use std::{collections::HashMap, sync::Arc};
 
 use denali::{
-     messaging::{receiver_task, 
+    Transactor,
+    messaging::{
+        receiver_task,
         // message_generator_task
-    }, plugins::{
-        plugin_task::plugin_scanner_task, 
+    },
+    plugins::{
         // Plugin,
         plugin_task::plugin_builder,
-    }, processor_task, web::web_task::web_task, Transactor
+        plugin_task::plugin_scanner_task,
+    },
+    processor_task,
+    web::web_task::web_task,
 };
 use tokio::{
-    join, 
-    spawn,
-    sync::{mpsc::{channel, 
-        // Receiver
-        }, 
-        RwLock},
+    join, spawn,
+    sync::{
+        RwLock,
+        mpsc::{
+            channel,
+            // Receiver
+        },
+    },
 };
 
 // use macros::HelloMacro;
@@ -42,12 +49,15 @@ async fn main() {
     // let _ = Plugin::stuff(bank_name, bank_path.as_ref(), contract_map.clone()).await;
 
     let plugin_scanner_task = spawn(plugin_scanner_task(path.as_ref(), plugin_tx));
-    let plugger_builder_task = spawn(plugin_builder(contract_map. clone() ,plugin_rx));
+    let plugger_builder_task = spawn(plugin_builder(contract_map.clone(), plugin_rx));
     // let message_generator_task = spawn(message_generator_task(tx.clone()));
     let receiver_task = spawn(receiver_task(tx_msg_queue, rx));
-    let processor_task = spawn(processor_task(contract_map.clone(), transactor.clone(), rx_msg_queue));
+    let processor_task = spawn(processor_task(
+        contract_map.clone(),
+        transactor.clone(),
+        rx_msg_queue,
+    ));
     let web_task = spawn(web_task(tx, transactor.clone(), contract_map.clone()));
-    
 
     let _res = join!(
         // message_generator_task,

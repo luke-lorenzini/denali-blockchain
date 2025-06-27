@@ -1,18 +1,14 @@
-use std::{
-    sync::{Arc, 
-        Mutex
-    },
-};
+use std::sync::{Arc, Mutex};
 
 // use tokio::sync::Mutex;
 use async_trait::async_trait;
 use denali::{
-    storage::State, types::{Thing, H256}, 
+    storage::State,
+    types::{H256, Thing},
 };
+use macros::generate_create_thing;
 use serde::Deserialize;
 use serde_json::Result;
-use macros::{
-    generate_create_thing};
 
 const CANDIDATES: u32 = 3;
 #[generate_create_thing(args(CANDIDATES))]
@@ -57,10 +53,11 @@ async fn vote_program(payload: &str, state: Arc<Mutex<State>>) -> Result<()> {
     let payload: Ballot = serde_json::from_str(payload)?;
     println!("payload: {payload:?}");
 
-    let current_count = state.lock()
-    // .await
-    .unwrap()
-    .get_value(&payload.candidate);
+    let current_count = state
+        .lock()
+        // .await
+        .unwrap()
+        .get_value(&payload.candidate);
     println!("{current_count:?}");
     state
         .lock()

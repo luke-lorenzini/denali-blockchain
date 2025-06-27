@@ -1,24 +1,31 @@
-use std::{
-    collections::HashMap, 
-    path::Path, 
-    sync::{ Arc},
-};
+use std::{collections::HashMap, path::Path, sync::Arc};
 
-use tokio::sync::{ mpsc::{Receiver as TokioReceive, Sender}, RwLock
-};
 use futures::{
-    channel::mpsc::{channel, Receiver},
     SinkExt, StreamExt,
+    channel::mpsc::{Receiver, channel},
 };
-use notify::{event::{ModifyKind, RenameMode}, Config, Event, EventKind, RecommendedWatcher, RecursiveMode, Watcher};
+use notify::{
+    Config, Event, EventKind, RecommendedWatcher, RecursiveMode, Watcher,
+    event::{ModifyKind, RenameMode},
+};
+use tokio::sync::{
+    RwLock,
+    mpsc::{Receiver as TokioReceive, Sender},
+};
 
 use crate::plugins::Plugin;
 
-pub async fn plugin_builder(contract_map: Arc<RwLock<HashMap<String, Plugin>>>, mut plugin_rx: TokioReceive<(&str, Option<Plugin>)> ) {
+pub async fn plugin_builder(
+    contract_map: Arc<RwLock<HashMap<String, Plugin>>>,
+    mut plugin_rx: TokioReceive<(&str, Option<Plugin>)>,
+) {
     while let Some(v) = plugin_rx.recv().await {
         println!("received something");
         if v.1.is_some() {
-            contract_map.write().await.insert(v.0.into(), v.1.expect("Already checked"));
+            contract_map
+                .write()
+                .await
+                .insert(v.0.into(), v.1.expect("Already checked"));
         } else {
             contract_map.write().await.remove(v.0).unwrap();
         }
@@ -27,15 +34,15 @@ pub async fn plugin_builder(contract_map: Arc<RwLock<HashMap<String, Plugin>>>, 
 
 pub async fn plugin_scanner_task(path: &Path, plugin_tx: Sender<(&str, Option<Plugin>)>) {
     // let scanner_thread = spawn(async {
-        // let path = std::env::args()
-        //     .nth(1)
-        //     .expect("Arg 1 needs to be a path");
+    // let path = std::env::args()
+    //     .nth(1)
+    //     .expect("Arg 1 needs to be a path");
 
-        // futures::executor::block_on(async {
-            if let Err(e) = async_watch(path, plugin_tx).await {
-                println!("error: {e:?}");
-            }
-        // });
+    // futures::executor::block_on(async {
+    if let Err(e) = async_watch(path, plugin_tx).await {
+        println!("error: {e:?}");
+    }
+    // });
     // });
 }
 
@@ -54,7 +61,10 @@ fn async_watcher() -> notify::Result<(RecommendedWatcher, Receiver<notify::Resul
     Ok((watcher, rx))
 }
 
-async fn async_watch<P: AsRef<Path>>(path: P, plugin_tx: Sender<(&str, Option<Plugin>)>) -> notify::Result<()> {
+async fn async_watch<P: AsRef<Path>>(
+    path: P,
+    plugin_tx: Sender<(&str, Option<Plugin>)>,
+) -> notify::Result<()> {
     let (mut watcher, mut rx) = async_watcher()?;
 
     watcher.watch(path.as_ref(), RecursiveMode::NonRecursive)?;
@@ -63,17 +73,17 @@ async fn async_watch<P: AsRef<Path>>(path: P, plugin_tx: Sender<(&str, Option<Pl
             Ok(event) => {
                 for path in event.paths {
                     if let EventKind::Modify(ModifyKind::Name(v)) = event.kind {
-                                    match v {
-                                        RenameMode::To => {
-                                            let p = Plugin::build(path).await;
-                                            let _x = plugin_tx.send((p.0, Some(p.1))).await;
-                                        }
-                                        RenameMode::From => {
-                                            // todo this needs fixing
-                                            // let _x = plugin_tx.send(("vote", None)).await;
-                                        }
-                                        _ => ()
-                                    }
+                        match v {
+                            RenameMode::To => {
+                                let p = Plugin::build(path).await;
+                                let _x = plugin_tx.send((p.0, Some(p.1))).await;
+                            }
+                            RenameMode::From => {
+                                // todo this needs fixing
+                                // let _x = plugin_tx.send(("vote", None)).await;
+                            }
+                            _ => (),
+                        }
                     }
                 }
             }

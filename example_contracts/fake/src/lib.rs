@@ -1,17 +1,12 @@
-use std::{
-    sync::{Arc, 
-        Mutex
-    },
-};
+use std::sync::{Arc, Mutex};
 
 // use tokio::sync::Mutex;
 use async_trait::async_trait;
 use denali::{
     storage::State,
-    types::{Thing, H256}, 
+    types::{H256, Thing},
 };
-use macros::{
-    generate_create_thing};
+use macros::generate_create_thing;
 // use hex::encode;
 // use log::debug;
 // use serde::Deserialize;
@@ -36,10 +31,11 @@ impl Thing for Fake {
 
     async fn run(&self, _payload: &str, state: Arc<Mutex<State>>) -> Result<H256> {
         println!("run fake");
-        let s = state.lock()
-        // .await
-        .unwrap()
-        .get_value("test");
+        let s = state
+            .lock()
+            // .await
+            .unwrap()
+            .get_value("test");
         println!("{s:?}");
         // let res = encode("test");
         // Ok(H256::try_from(res).unwrap())

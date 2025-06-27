@@ -1,8 +1,6 @@
 use std::{
     collections::HashMap,
-    sync::{Arc, 
-        Mutex
-    },
+    sync::{Arc, Mutex},
 };
 
 use async_trait::async_trait;
@@ -10,11 +8,10 @@ use denali::{
     storage::State,
     types::{H256, Thing},
 };
+use macros::generate_create_thing;
 use rust_decimal::{Decimal, dec};
 use serde::Deserialize;
 use serde_json::Result;
-use macros::{
-    generate_create_thing};
 
 #[generate_create_thing(args(vec![]))]
 #[derive(Debug)]

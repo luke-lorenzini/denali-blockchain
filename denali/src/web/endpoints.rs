@@ -29,7 +29,7 @@ pub async fn submit(
     // println!("{state:?}");
     // println!("{payload:?}");
     let program = payload.program.to_string();
-    
+
     let xxx = state.contract_map.read().await;
     match xxx.contains_key(&program) {
         true => {
@@ -42,9 +42,7 @@ pub async fn submit(
             let _res = state.tx.send((program, payload)).await;
             (StatusCode::OK, "plugin found")
         }
-        false => {
-            (StatusCode::BAD_REQUEST, "plugin not found")
-        }
+        false => (StatusCode::BAD_REQUEST, "plugin not found"),
     }
 }
 

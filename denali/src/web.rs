@@ -1,4 +1,4 @@
-use std::{sync::Arc, collections:: HashMap};
+use std::{collections::HashMap, sync::Arc};
 
 use tokio::sync::{RwLock, mpsc::Sender};
 
@@ -11,5 +11,5 @@ pub mod web_task;
 pub struct WebState {
     pub transactor: Arc<RwLock<Transactor>>,
     pub tx: Sender<(String, String)>,
-    pub contract_map: Arc<RwLock<HashMap<String, Plugin>>>
+    pub contract_map: Arc<RwLock<HashMap<String, Plugin>>>,
 }

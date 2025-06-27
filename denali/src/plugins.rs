@@ -1,9 +1,12 @@
 use std::{
-    collections::HashMap, ffi::c_void, path::{Path, PathBuf}, sync::Arc
+    collections::HashMap,
+    ffi::c_void,
+    path::{Path, PathBuf},
+    sync::Arc,
 };
 
 use libloading::Library;
-use tokio::{sync::{ RwLock}};
+use tokio::sync::RwLock;
 
 // use futures::{
 //     channel::mpsc::{channel, Receiver},
@@ -69,43 +72,41 @@ impl Plugin {
     }
 
     async fn _stuff(name: &str, path: &Path, contract_map: Arc<RwLock<HashMap<String, Plugin>>>) {
-            unsafe {
-                let lib = libloading::Library::new(path)
-                    .unwrap();
-                let func: libloading::Symbol<Contract> = lib.get(b"create_thing").unwrap();
-                let xxx = func();
+        unsafe {
+            let lib = libloading::Library::new(path).unwrap();
+            let func: libloading::Symbol<Contract> = lib.get(b"create_thing").unwrap();
+            let xxx = func();
 
-                let boxed_raw_trait_object = Box::from_raw(xxx.cast::<RawTraitObject>());
-                let raw_trait_object = *boxed_raw_trait_object;
-                let raw_fat_ptr: *mut dyn Thing = std::mem::transmute(raw_trait_object);
-                let owned_plugin_box: Box<dyn Thing> = Box::from_raw(raw_fat_ptr);
+            let boxed_raw_trait_object = Box::from_raw(xxx.cast::<RawTraitObject>());
+            let raw_trait_object = *boxed_raw_trait_object;
+            let raw_fat_ptr: *mut dyn Thing = std::mem::transmute(raw_trait_object);
+            let owned_plugin_box: Box<dyn Thing> = Box::from_raw(raw_fat_ptr);
 
-                let plugin = Plugin::new(lib, owned_plugin_box);
-                contract_map.write().await.insert(name.into(), plugin);
-            }
+            let plugin = Plugin::new(lib, owned_plugin_box);
+            contract_map.write().await.insert(name.into(), plugin);
+        }
 
-            let v = contract_map.read().await.get(name).unwrap().thing.verify();
-            println!("Result of verification for {name:?}: {v:?}");
+        let v = contract_map.read().await.get(name).unwrap().thing.verify();
+        println!("Result of verification for {name:?}: {v:?}");
     }
 
     pub async fn build(
         // path: &Path
-        path: PathBuf
+        path: PathBuf,
     ) -> (&'static str, Plugin) {
         unsafe {
-                let lib = libloading::Library::new(path)
-                    .unwrap();
-                let func: libloading::Symbol<Contract> = lib.get(b"create_thing").unwrap();
-                let xxx = func();
+            let lib = libloading::Library::new(path).unwrap();
+            let func: libloading::Symbol<Contract> = lib.get(b"create_thing").unwrap();
+            let xxx = func();
 
-                let boxed_raw_trait_object = Box::from_raw(xxx.cast::<RawTraitObject>());
-                let raw_trait_object = *boxed_raw_trait_object;
-                let raw_fat_ptr: *mut dyn Thing = std::mem::transmute(raw_trait_object);
-                let owned_plugin_box: Box<dyn Thing> = Box::from_raw(raw_fat_ptr);
+            let boxed_raw_trait_object = Box::from_raw(xxx.cast::<RawTraitObject>());
+            let raw_trait_object = *boxed_raw_trait_object;
+            let raw_fat_ptr: *mut dyn Thing = std::mem::transmute(raw_trait_object);
+            let owned_plugin_box: Box<dyn Thing> = Box::from_raw(raw_fat_ptr);
 
-                let name = owned_plugin_box.name();
+            let name = owned_plugin_box.name();
 
-                (name, Plugin::new(lib, owned_plugin_box)            )
-            }
+            (name, Plugin::new(lib, owned_plugin_box))
+        }
     }
 }

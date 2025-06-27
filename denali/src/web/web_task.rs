@@ -1,4 +1,4 @@
-use std::{sync::Arc, collections:: HashMap};
+use std::{collections::HashMap, sync::Arc};
 
 use axum::{
     // http::StatusCode,
@@ -9,12 +9,22 @@ use axum::{
 use tokio::sync::{RwLock, mpsc::Sender};
 
 use crate::{
-    plugins::Plugin, web::endpoints::{chain_height, get_something, root, submit}, Transactor,
-    web::WebState
+    Transactor,
+    plugins::Plugin,
+    web::WebState,
+    web::endpoints::{chain_height, get_something, root, submit},
 };
 
-pub async fn web_task(tx: Sender<(String, String)>, transactor: Arc<RwLock<Transactor>>, contract_map: Arc<RwLock<HashMap<String, Plugin>>>) {
-    let web_state = WebState { transactor, tx, contract_map };
+pub async fn web_task(
+    tx: Sender<(String, String)>,
+    transactor: Arc<RwLock<Transactor>>,
+    contract_map: Arc<RwLock<HashMap<String, Plugin>>>,
+) {
+    let web_state = WebState {
+        transactor,
+        tx,
+        contract_map,
+    };
     let app = Router::new()
         .route("/", get(root))
         .route("/chain-height", get(chain_height))
