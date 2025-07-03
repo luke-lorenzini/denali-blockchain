@@ -3,6 +3,7 @@ use std::sync::Arc;
 use async_trait::async_trait;
 use derive_more::AsRef;
 use hex::decode;
+use semver::Version;
 use serde::{Deserialize, Serialize};
 use serde_json::{Result, Value};
 use tokio::sync::Mutex;
@@ -46,6 +47,7 @@ impl TryFrom<&str> for H256 {
 #[async_trait]
 pub trait Thing: Send + Sync {
     fn name(&self) -> &'static str;
+    fn version(&self) -> Version;
     fn verify(&self) -> Result<bool>;
     async fn run(&self, payload: &str, state: Arc<Mutex<State>>) -> Result<H256>;
 }

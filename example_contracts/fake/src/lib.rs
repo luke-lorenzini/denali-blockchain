@@ -6,6 +6,7 @@ use denali::{
     types::{H256, Thing},
 };
 use macros::generate_create_thing;
+use semver::Version;
 use tokio::sync::Mutex;
 // use hex::encode;
 // use log::debug;
@@ -27,6 +28,10 @@ impl Fake {
 impl Thing for Fake {
     fn name(&self) -> &'static str {
         "fake"
+    }
+
+    fn version(&self) -> Version  {
+        Version::parse("0.1.0").unwrap()
     }
 
     async fn run(&self, _payload: &str, state: Arc<Mutex<State>>) -> Result<H256> {

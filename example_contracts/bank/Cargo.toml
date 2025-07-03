@@ -10,6 +10,7 @@ macros = { path = "../../macros" }
 async-trait.workspace = true
 log.workspace = true
 rust_decimal.workspace = true
+semver.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 tokio.workspace = true

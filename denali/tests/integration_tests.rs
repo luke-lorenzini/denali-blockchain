@@ -6,6 +6,7 @@ use denali::{
     storage::State,
     types::{H256, Thing},
 };
+use semver::Version;
 use serde::Deserialize;
 use tokio::sync::Mutex;
 
@@ -114,6 +115,10 @@ struct FakeProgram;
 
 #[async_trait]
 impl Thing for FakeProgram {
+    fn version(&self) -> Version {
+        Version::parse("0.1.0").unwrap()
+    }
+
     fn name(&self) -> &'static str {
         "fake"
     }

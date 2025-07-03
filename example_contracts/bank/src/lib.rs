@@ -7,6 +7,7 @@ use denali::{
 };
 use macros::generate_create_thing;
 use rust_decimal::{Decimal, dec};
+use semver::Version;
 use serde::Deserialize;
 use serde_json::Result;
 use tokio::sync::Mutex;
@@ -21,6 +22,10 @@ pub struct Bank {
 impl Thing for Bank {
     fn name(&self) -> &'static str {
         "bank"
+    }
+
+    fn version(&self) -> Version  {
+        Version::parse("0.1.0").unwrap()
     }
 
     async fn run(&self, payload: &str, _state: Arc<Mutex<State>>) -> Result<H256> {

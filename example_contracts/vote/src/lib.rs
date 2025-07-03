@@ -6,6 +6,7 @@ use denali::{
     types::{H256, Thing},
 };
 use macros::generate_create_thing;
+use semver::Version;
 use serde::Deserialize;
 use serde_json::Result;
 use tokio::sync::Mutex;
@@ -21,6 +22,10 @@ struct Vote {
 impl Thing for Vote {
     fn name(&self) -> &'static str {
         "vote"
+    }
+
+    fn version(&self) -> Version  {
+        Version::parse("0.1.0").unwrap()
     }
 
     async fn run(&self, payload: &str, state: Arc<Mutex<State>>) -> Result<H256> {
