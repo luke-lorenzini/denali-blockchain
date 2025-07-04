@@ -63,7 +63,6 @@ pub struct Plugin {
 }
 
 impl Plugin {
-    #[must_use]
     pub fn new(library: Library, program: Box<dyn Thing>) -> Self {
         Plugin {
             _library: library,

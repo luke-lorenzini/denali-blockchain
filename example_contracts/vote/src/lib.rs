@@ -41,7 +41,6 @@ impl Thing for Vote {
 }
 
 impl Vote {
-    #[must_use]
     fn new(number_of_candidates: u32) -> Self {
         let votes = vec![0; number_of_candidates as usize];
         println!("VOTE!");
