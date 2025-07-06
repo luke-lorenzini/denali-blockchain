@@ -95,7 +95,7 @@ async fn async_watch<P: AsRef<Path>>(
 async fn search_for_existing_plugins(path: &Path, plugin_tx: Sender<(&str, Option<Plugin>)>) {
     let path = path.join("*.so");
     let path = path.to_str().unwrap();
-    
+
     for entry in glob(path).expect("Failed to read glob pattern") {
         match entry {
             Ok(path) => {
@@ -103,7 +103,7 @@ async fn search_for_existing_plugins(path: &Path, plugin_tx: Sender<(&str, Optio
                 let xxx = path;
                 let p = Plugin::build(xxx).await;
                 let _x = plugin_tx.send((p.0, Some(p.1))).await;
-            },
+            }
             Err(e) => println!("{:?}", e),
         }
     }

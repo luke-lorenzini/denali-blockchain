@@ -24,7 +24,7 @@ impl Thing for Bank {
         "bank"
     }
 
-    fn version(&self) -> Version  {
+    fn version(&self) -> Version {
         Version::parse("0.1.0").unwrap()
     }
 

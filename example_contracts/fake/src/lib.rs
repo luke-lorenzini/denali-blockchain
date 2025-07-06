@@ -30,7 +30,7 @@ impl Thing for Fake {
         "fake"
     }
 
-    fn version(&self) -> Version  {
+    fn version(&self) -> Version {
         Version::parse("0.1.0").unwrap()
     }
 
