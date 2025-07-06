@@ -4,6 +4,7 @@ use futures::{
     SinkExt, StreamExt,
     channel::mpsc::{Receiver, channel},
 };
+use glob::glob;
 use notify::{
     Config, Event, EventKind, RecommendedWatcher, RecursiveMode, Watcher,
     event::{ModifyKind, RenameMode},
@@ -20,7 +21,6 @@ pub async fn plugin_builder(
     mut plugin_rx: TokioReceive<(&str, Option<Plugin>)>,
 ) {
     while let Some(v) = plugin_rx.recv().await {
-        println!("received something");
         if v.1.is_some() {
             contract_map
                 .write()
@@ -33,10 +33,7 @@ pub async fn plugin_builder(
 }
 
 pub async fn plugin_scanner_task(path: &Path, plugin_tx: Sender<(&str, Option<Plugin>)>) {
-    // let scanner_thread = spawn(async {
-    // let path = std::env::args()
-    //     .nth(1)
-    //     .expect("Arg 1 needs to be a path");
+    search_for_existing_plugins(path, plugin_tx.clone()).await;
 
     // futures::executor::block_on(async {
     if let Err(e) = async_watch(path, plugin_tx).await {
@@ -69,6 +66,7 @@ async fn async_watch<P: AsRef<Path>>(
 
     watcher.watch(path.as_ref(), RecursiveMode::NonRecursive)?;
     while let Some(res) = rx.next().await {
+        // todo fix this nesting
         match res {
             Ok(event) => {
                 for path in event.paths {
@@ -92,4 +90,21 @@ async fn async_watch<P: AsRef<Path>>(
     }
 
     Ok(())
+}
+
+async fn search_for_existing_plugins(path: &Path, plugin_tx: Sender<(&str, Option<Plugin>)>) {
+    let path = path.join("*.so");
+    let path = path.to_str().unwrap();
+    
+    for entry in glob(path).expect("Failed to read glob pattern") {
+        match entry {
+            Ok(path) => {
+                println!("found {:?}", path.display());
+                let xxx = path;
+                let p = Plugin::build(xxx).await;
+                let _x = plugin_tx.send((p.0, Some(p.1))).await;
+            },
+            Err(e) => println!("{:?}", e),
+        }
+    }
 }

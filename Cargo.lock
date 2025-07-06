@@ -352,6 +352,7 @@ dependencies = [
  "axum",
  "derive_more",
  "futures",
+ "glob",
  "hex",
  "libloading",
  "log",
