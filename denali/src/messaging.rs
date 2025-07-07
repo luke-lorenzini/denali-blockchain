@@ -1,38 +1,35 @@
-// use std::sync::Arc;
+use std::time::{SystemTime, UNIX_EPOCH};
 
-// use axum::{
-//     routing::{
-//         get,
-//         post
-//     },
-//     // http::StatusCode,
-//     // Json,
-//     Router,
-// };
-// use crate::{
-//     Message,
-//     Transactor,
-//     plugin::Plugin,
-//     web::{
-//         task::web,
-//     },
-// };
-// use futures::future::join_all;
+use hex::encode;
+use sha2::{Digest, Sha256};
 use tokio::{
-    // join, spawn,
     sync::{
         mpsc::{
-            // channel,
             Receiver,
             Sender,
         },
-        // RwLock
+        oneshot,
     },
-    // task::JoinHandle,
     time::{Duration, sleep},
 };
 
-pub async fn message_generator_task(tx: Sender<(String, String)>) {
+use crate::types::H256;
+
+pub struct Meta {}
+
+pub struct ResponseTx {
+    pub one_shot: oneshot::Sender<ResponseRx>,
+    pub metadata: Meta,
+    pub program: String,
+    pub payload: String,
+}
+
+pub struct ResponseRx {
+    pub status: bool,
+    pub tx_id: H256,
+}
+
+pub async fn message_generator_task(tx: Sender<(String, String, Meta)>) {
     let mut flag = 0;
 
     loop {
@@ -68,13 +65,15 @@ pub async fn message_generator_task(tx: Sender<(String, String)>) {
             program = "vote";
         }
 
-        tx.send((program.into(), payload.into())).await.unwrap();
+        tx.send((program.into(), payload.into(), Meta {}))
+            .await
+            .unwrap();
     }
 }
 
 pub async fn receiver_task(
-    tx_msg_queue: Sender<Vec<(String, String)>>,
-    mut rx: Receiver<(String, String)>,
+    tx_msg_queue: Sender<Vec<(String, String, H256)>>,
+    mut rx: Receiver<ResponseTx>,
 ) {
     // todo: move const to a config file
     const BATCH_SIZE: usize = 10;
@@ -82,7 +81,27 @@ pub async fn receiver_task(
 
     while let Some(i) = rx.recv().await {
         // confirm the rx'd message has been queued for processing. it could fail, but at this point, it'll be in the ledger
-        transactions.push(i);
+        let mut hasher = Sha256::new();
+        hasher.update(i.program.clone());
+        hasher.update(i.payload.clone());
+        hasher.update(
+            SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .unwrap()
+                .as_secs()
+                .to_le_bytes(),
+        );
+        // hasher.update(i.metadata);
+        let res = hasher.finalize();
+        let tx_id: H256 = encode(res).try_into().unwrap();
+        println!("tx hash: {tx_id:?}");
+        let ack = ResponseRx {
+            status: true,
+            tx_id: tx_id.clone(),
+        };
+        let _ = i.one_shot.send(ack);
+
+        transactions.push((i.program, i.payload, tx_id));
         if transactions.len() == BATCH_SIZE {
             let batch = std::mem::take(&mut transactions);
             tx_msg_queue.send(batch).await.unwrap();

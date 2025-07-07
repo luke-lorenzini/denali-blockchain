@@ -30,7 +30,7 @@ impl Thing for Bank {
 
     async fn run(&self, payload: &str, _state: Arc<Mutex<State>>) -> Result<H256> {
         bank_program(payload)?;
-        Ok(H256::default())
+        Ok(H256::dummy())
     }
 
     fn verify(&self) -> Result<bool> {

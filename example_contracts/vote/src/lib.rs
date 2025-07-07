@@ -31,7 +31,7 @@ impl Thing for Vote {
     async fn run(&self, payload: &str, state: Arc<Mutex<State>>) -> Result<H256> {
         println!("vote run");
         vote_program(payload, state).await.unwrap();
-        Ok(H256::default())
+        Ok(H256::dummy())
     }
 
     fn verify(&self) -> Result<bool> {

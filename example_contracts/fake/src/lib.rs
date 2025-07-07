@@ -44,7 +44,7 @@ impl Thing for Fake {
         println!("{s:?}");
         // let res = encode("test");
         // Ok(H256::try_from(res).unwrap())
-        Ok(H256::default())
+        Ok(H256::dummy())
     }
 
     fn verify(&self) -> Result<bool> {

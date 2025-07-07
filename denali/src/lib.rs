@@ -22,6 +22,7 @@ pub mod web;
 pub struct Message<T> {
     pub program: T,
     pub payload: String,
+    tx_id: H256
 }
 
 #[derive(Debug)]
@@ -42,11 +43,11 @@ impl Transactor {
     }
 
     // todo: redundant, maybe remove
-    pub fn get_chain_height(&self) -> u32 {
-        self.chain.get_chain_height()
+    pub fn get_height(&self) -> u32 {
+        self.chain.get_height()
     }
 
-    async fn parse(&self, message: Message<&dyn Thing>) -> Result<H256> {
+    async fn parse(&self, message: &Message<Box<dyn Thing + Send + Sync>>) -> Result<H256> {
         println!("parse");
         if message.program.verify()? {
             let xxx = self.chain.state.clone();
@@ -56,7 +57,10 @@ impl Transactor {
         todo!()
     }
 
-    async fn process_transaction(&self, transaction: Message<&dyn Thing>) -> Result<H256> {
+    async fn process_transaction(
+        &self,
+        transaction: &Message<Box<dyn Thing + Send + Sync>>,
+    ) -> Result<H256> {
         // fn process_transaction<T: Thing>(&self, transaction: Message<T>) -> Result<H256> {
         println!("process_transaction");
 
@@ -65,7 +69,7 @@ impl Transactor {
 
     async fn process_transactions(
         &self,
-        transactions: Vec<Message<&dyn Thing>>,
+        transactions: Vec<Message<Box<dyn Thing + Send + Sync>>>,
         transactions_map: Arc<Mutex<HashMap<H256, String>>>,
     ) -> Vec<H256> {
         // fn process_transactions<T: Thing>(&self, transactions: Vec<Message<T>>) -> H256 {
@@ -74,14 +78,14 @@ impl Transactor {
         // let mut hasher = Sha256::new();
         for transaction in transactions {
             // 'tx' that gets written into the tx log should be based on tx details. This needs to be determined before it's processed, deterministically.
-            let tx = self.process_transaction(transaction.clone()).await.unwrap();
+            let _tx = self.process_transaction(&transaction).await.unwrap();
             transactions_map
                 .lock()
                 // .unwrap()
                 .await
-                .insert(tx.clone(), transaction.payload);
+                .insert(transaction.tx_id.clone(), transaction.payload);
             // hasher.update(tx.as_ref());
-            res.push(tx);
+            res.push(transaction.tx_id);
         }
         // let res = hasher.finalize();
         // let merkle_tree_root = encode(res);
@@ -91,7 +95,10 @@ impl Transactor {
     }
 
     // Process a batch of transactions
-    pub async fn create_new_block(&mut self, messages: Vec<Message<&dyn Thing>>) -> bool {
+    pub async fn create_new_block(
+        &mut self,
+        messages: Vec<Message<Box<dyn Thing + Send + Sync>>>,
+    ) -> bool {
         // pub fn create_new_block<T: Thing>(&mut self, messages: Vec<Message<T>>) -> bool {
         println!("create_new_block");
         let transactions = Arc::new(Mutex::new(HashMap::new()));
@@ -105,9 +112,9 @@ impl Transactor {
         let res = hasher.finalize();
         // all the tx hashes wrapped into one 'merkle tree' <- need to impl a real tree
         let merkle_tree_root = encode(res);
-        let thing = Arc::try_unwrap(transactions).unwrap().into_inner();
+        let block_transactions = Arc::try_unwrap(transactions).unwrap().into_inner();
         self.chain
-            .add_next_block(merkle_tree_root.try_into().unwrap(), thing);
+            .add_next_block(merkle_tree_root.try_into().unwrap(), block_transactions);
         true
     }
 }
@@ -115,28 +122,29 @@ impl Transactor {
 pub async fn processor_task(
     contract_map: Arc<RwLock<HashMap<String, Plugin>>>,
     transactor: Arc<RwLock<Transactor>>,
-    mut rx_msg_queue: Receiver<Vec<(String, String)>>,
+    mut rx_msg_queue: Receiver<Vec<(String, String, H256)>>,
 ) {
-    println!("notified");
-
     // receive a batch of messages
     while let Some(messages) = rx_msg_queue.recv().await {
+        let mut transactions = Vec::new();
         for message in messages {
             let program = contract_map.read().await;
             println!("{:?}", message.0);
-            let program = program.get(message.0.as_str()).unwrap().thing.as_ref();
-            let message = Message {
+            let program = program.get(&message.0).unwrap().thing.clone_box();
+
+            let transaction = Message {
                 program,
                 payload: message.1,
+                tx_id: message.2,
             };
-            let messages = vec![message];
-            let _res = transactor
-                .clone()
-                .write()
-                .await
-                .create_new_block(messages)
-                .await;
+            transactions.push(transaction);
         }
+        let _res = transactor
+            .clone()
+            .write()
+            .await
+            .create_new_block(transactions)
+            .await;
     }
 }
 
