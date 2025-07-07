@@ -13,7 +13,7 @@ use serde_json::Result;
 use tokio::sync::Mutex;
 
 #[generate_create_thing(args(vec![]))]
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct Bank {
     accounts: HashMap<u32, Account>,
 }
@@ -52,7 +52,7 @@ impl Bank {
     }
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 struct Account {
     #[allow(dead_code)]
     name: String,
