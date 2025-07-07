@@ -178,7 +178,7 @@ impl Chain {
         let mut res = vec![String::try_from(current.clone()).unwrap()];
         println!("tip: {:?}", String::try_from(self.tip.clone()).unwrap());
 
-        for _ in 0..self.count-1 {
+        for _ in 0..self.count - 1 {
             let x = self.blocks.get(&current);
             if let Some(p) = x {
                 let previous: String = p.header.previous_block_hash.clone().try_into().unwrap();
