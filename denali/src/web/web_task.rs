@@ -33,6 +33,7 @@ pub async fn web_task(
         .route("/is-block", get(is_block))
         .route("/get-block-header", get(block_header))
         .route("/get-block-transactions", get(block_transactions))
+        .route("/get-chain", get(get_chain))
         .with_state(web_state);
 
     let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await.unwrap();
