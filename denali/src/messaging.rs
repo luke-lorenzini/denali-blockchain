@@ -1,5 +1,4 @@
-use std::time::{SystemTime, UNIX_EPOCH};
-
+use chrono::Utc;
 use hex::encode;
 use sha2::{Digest, Sha256};
 use tokio::{
@@ -77,15 +76,9 @@ pub async fn receiver_task(
     while let Some(i) = rx.recv().await {
         // confirm the rx'd message has been queued for processing. it could fail, but at this point, it'll be in the ledger
         let mut hasher = Sha256::new();
+        hasher.update(Utc::now().timestamp_micros().to_le_bytes());
         hasher.update(i.program.clone());
         hasher.update(i.payload.clone());
-        hasher.update(
-            SystemTime::now()
-                .duration_since(UNIX_EPOCH)
-                .unwrap()
-                .as_secs()
-                .to_le_bytes(),
-        );
         // hasher.update(i.metadata);
         let res = hasher.finalize();
         let tx_id: H256 = encode(res).try_into().unwrap();

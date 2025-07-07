@@ -1,9 +1,6 @@
-use std::{
-    collections::HashMap,
-    sync::Arc,
-    time::{SystemTime, UNIX_EPOCH},
-};
+use std::{collections::HashMap, sync::Arc};
 
+use chrono::Utc;
 use hex::encode;
 use sha2::{Digest, Sha256};
 use tokio::sync::Mutex;
@@ -15,7 +12,7 @@ pub struct Header {
     version: u32,
     previous_block_hash: String,
     _merkle_tree_root: String,
-    timestamp: u64,
+    timestamp: i64,
     difficulty: u32,
     nonce: u32,
 }
@@ -26,11 +23,7 @@ impl Header {
             version: VERSION,
             previous_block_hash: previous_block_hash.into(),
             _merkle_tree_root: merkle_tree_root.into(),
-            // need a better way for handling time todo - utc time, not local
-            timestamp: SystemTime::now()
-                .duration_since(UNIX_EPOCH)
-                .unwrap()
-                .as_secs(),
+            timestamp: Utc::now().timestamp_micros(),
             difficulty: u32::default(),
             nonce: u32::default(),
         }
@@ -41,11 +34,7 @@ impl Header {
             version: VERSION,
             previous_block_hash: H256::zero().into(),
             _merkle_tree_root: H256::dummy().into(),
-            // need a better way for handling time - todo utc not local time
-            timestamp: SystemTime::now()
-                .duration_since(UNIX_EPOCH)
-                .unwrap()
-                .as_secs(),
+            timestamp: Utc::now().timestamp_micros(),
             difficulty: u32::default(),
             nonce: u32::default(),
         }
