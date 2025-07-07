@@ -9,11 +9,11 @@ use crate::{storage::State, types::H256};
 // todo move to a config
 const VERSION: u32 = 0;
 
-#[derive(Debug)]
-struct Header {
+#[derive(Clone, Debug)]
+pub struct Header {
     version: u32,
-    _previous_block_hash: H256,
-    _merkle_tree_root: H256,
+    previous_block_hash: String,
+    _merkle_tree_root: String,
     timestamp: u64,
     difficulty: u32,
     nonce: u32,
@@ -23,8 +23,8 @@ impl Header {
     fn new(previous_block_hash: H256, merkle_tree_root: H256) -> Self {
         Self {
             version: VERSION,
-            _previous_block_hash: previous_block_hash,
-            _merkle_tree_root: merkle_tree_root,
+            previous_block_hash: previous_block_hash.try_into().unwrap(),
+            _merkle_tree_root: merkle_tree_root.try_into().unwrap(),
             timestamp: u64::default(),
             difficulty: u32::default(),
             nonce: u32::default(),
@@ -34,8 +34,8 @@ impl Header {
     fn genesis() -> Self {
         Self {
             version: VERSION,
-            _previous_block_hash: H256::default(),
-            _merkle_tree_root: H256::default(),
+            previous_block_hash: H256::zero().try_into().unwrap(),
+            _merkle_tree_root: H256::dummy().try_into().unwrap(),
             timestamp: u64::default(),
             difficulty: u32::default(),
             nonce: u32::default(),
@@ -63,10 +63,11 @@ impl Header {
     }
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 struct Block {
+    block_hash: H256,
     header: Header,
-    _transactions: HashMap<H256, String>,
+    transactions: HashMap<H256, String>,
 }
 
 impl Block {
@@ -75,27 +76,31 @@ impl Block {
         merkle_tree_root: H256,
         transactions: HashMap<H256, String>,
     ) -> Self {
-        let header = Header::new(previous_block_hash, merkle_tree_root);
+        let header = Header::new(previous_block_hash.clone(), merkle_tree_root.clone());
+        let block_hash = header.calc_hash();
         Self {
+            block_hash,
             header,
-            _transactions: transactions,
+            transactions,
         }
     }
 
     fn genesis() -> Self {
         // todo: what should the MTR be here?
         Self {
+            block_hash: H256::zero(),
             header: Header::genesis(),
-            _transactions: HashMap::new(),
+            transactions: HashMap::new(),
         }
     }
 }
 
 #[derive(Debug)]
 pub struct Chain {
-    blocks: Vec<Block>,
+    blocks: HashMap<H256, Block>,
     count: u32,
     pub state: Arc<Mutex<State>>,
+    tip: H256,
 }
 
 impl Default for Chain {
@@ -106,16 +111,20 @@ impl Default for Chain {
 
 impl Chain {
     pub(crate) fn new() -> Self {
-        let genesis_block = vec![Block::genesis()];
+        let genesis = Block::genesis();
+        let tip = genesis.block_hash.clone();
+        let mut blocks = HashMap::new();
+        blocks.insert(tip.clone(), genesis);
         let state = Arc::new(Mutex::new(State::new()));
         Self {
-            count: u32::try_from(genesis_block.len()).unwrap(),
-            blocks: genesis_block,
+            count: blocks.len().try_into().unwrap(),
+            blocks,
             state,
+            tip,
         }
     }
 
-    pub(crate) fn get_chain_height(&self) -> u32 {
+    pub(crate) fn get_height(&self) -> u32 {
         self.count
     }
 
@@ -126,13 +135,16 @@ impl Chain {
     ) -> bool {
         let block = Block::new(self.get_block_hash(), merkle_tree_root, transactions);
         println!("block: {block:?}");
-        self.blocks.push(block);
-        self.count = u32::try_from(self.blocks.len()).unwrap();
+        self.tip = block.block_hash.clone();
+        self.blocks.insert(self.tip.clone(), block);
+        self.count += 1;
         true
     }
 
     fn get_block_hash(&self) -> H256 {
-        self.blocks.last().unwrap().header.calc_hash()
+        // self.blocks.last().unwrap().header.calc_hash()
+        // self.blocks.get(&self.tip).unwrap().header.calc_hash()
+        self.tip.clone()
     }
 }
 
