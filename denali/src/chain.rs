@@ -1,4 +1,8 @@
-use std::{collections::HashMap, sync::Arc};
+use std::{
+    collections::HashMap,
+    sync::Arc,
+    time::{SystemTime, UNIX_EPOCH},
+};
 
 use hex::encode;
 use sha2::{Digest, Sha256};
@@ -25,7 +29,11 @@ impl Header {
             version: VERSION,
             previous_block_hash: previous_block_hash.try_into().unwrap(),
             _merkle_tree_root: merkle_tree_root.try_into().unwrap(),
-            timestamp: u64::default(),
+            // need a better way for handling time todo - utc time, not local
+            timestamp: SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .unwrap()
+                .as_secs(),
             difficulty: u32::default(),
             nonce: u32::default(),
         }
@@ -36,7 +44,11 @@ impl Header {
             version: VERSION,
             previous_block_hash: H256::zero().try_into().unwrap(),
             _merkle_tree_root: H256::dummy().try_into().unwrap(),
-            timestamp: u64::default(),
+            // need a better way for handling time - todo utc not local time
+            timestamp: SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .unwrap()
+                .as_secs(),
             difficulty: u32::default(),
             nonce: u32::default(),
         }
