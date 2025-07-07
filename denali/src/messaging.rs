@@ -76,10 +76,12 @@ pub async fn receiver_task(
     tx_msg_queue: Sender<Vec<(String, String)>>,
     mut rx: Receiver<(String, String)>,
 ) {
+    // todo: move const to a config file
     const BATCH_SIZE: usize = 10;
     let mut transactions = Vec::new();
 
     while let Some(i) = rx.recv().await {
+        // confirm the rx'd message has been queued for processing. it could fail, but at this point, it'll be in the ledger
         transactions.push(i);
         if transactions.len() == BATCH_SIZE {
             let batch = std::mem::take(&mut transactions);

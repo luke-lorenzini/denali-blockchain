@@ -41,24 +41,21 @@ impl Transactor {
         Transactor { chain }
     }
 
+    // todo: redundant, maybe remove
     pub fn get_chain_height(&self) -> u32 {
         self.chain.get_chain_height()
     }
 
-    // working
     async fn parse(&self, message: Message<&dyn Thing>) -> Result<H256> {
         println!("parse");
         if message.program.verify()? {
-            // todo this should not be clone, but arc<mut
             let xxx = self.chain.state.clone();
             let res = message.program.run(&message.payload, xxx).await?;
-            // transactions.insert(res, message.payload);
             return Ok(res);
         }
         todo!()
     }
 
-    // working
     async fn process_transaction(&self, transaction: Message<&dyn Thing>) -> Result<H256> {
         // fn process_transaction<T: Thing>(&self, transaction: Message<T>) -> Result<H256> {
         println!("process_transaction");
@@ -66,7 +63,6 @@ impl Transactor {
         self.parse(transaction).await
     }
 
-    // working
     async fn process_transactions(
         &self,
         transactions: Vec<Message<&dyn Thing>>,
@@ -77,6 +73,7 @@ impl Transactor {
         let mut res = vec![];
         // let mut hasher = Sha256::new();
         for transaction in transactions {
+            // 'tx' that gets written into the tx log should be based on tx details. This needs to be determined before it's processed, deterministically.
             let tx = self.process_transaction(transaction.clone()).await.unwrap();
             transactions_map
                 .lock()
@@ -93,7 +90,7 @@ impl Transactor {
         res
     }
 
-    // working
+    // Process a batch of transactions
     pub async fn create_new_block(&mut self, messages: Vec<Message<&dyn Thing>>) -> bool {
         // pub fn create_new_block<T: Thing>(&mut self, messages: Vec<Message<T>>) -> bool {
         println!("create_new_block");
@@ -106,8 +103,8 @@ impl Transactor {
             hasher.update(tx.as_ref());
         }
         let res = hasher.finalize();
+        // all the tx hashes wrapped into one 'merkle tree' <- need to impl a real tree
         let merkle_tree_root = encode(res);
-        // let merkle_tree_root = self.process_transactions(messages);
         let thing = Arc::try_unwrap(transactions).unwrap().into_inner();
         self.chain
             .add_next_block(merkle_tree_root.try_into().unwrap(), thing);
@@ -122,6 +119,7 @@ pub async fn processor_task(
 ) {
     println!("notified");
 
+    // receive a batch of messages
     while let Some(messages) = rx_msg_queue.recv().await {
         for message in messages {
             let program = contract_map.read().await;

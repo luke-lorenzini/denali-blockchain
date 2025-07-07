@@ -66,6 +66,7 @@ impl Plugin {
     pub fn new(library: Library, program: Box<dyn Thing>) -> Self {
         Plugin {
             _library: library,
+            // todo: wrap this in an Arc....maybe
             thing: program,
         }
     }

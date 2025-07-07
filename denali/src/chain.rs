@@ -6,8 +6,8 @@ use tokio::sync::Mutex;
 
 use crate::{storage::State, types::H256};
 
+// todo move to a config
 const VERSION: u32 = 0;
-// const TRANSACTIONS_PER_BLOCK: u32 = 10;
 
 #[derive(Debug)]
 struct Header {
@@ -45,6 +45,7 @@ impl Header {
     fn to_bytes(&self) -> Vec<u8> {
         [
             &self.version.to_be_bytes()[..],
+            // todo
             // &self.previous_block_hash.to_bytes()[..],
             // &self.merkle_tree_root.to_bytes()[..],
             &self.timestamp.to_be_bytes()[..],
@@ -65,7 +66,6 @@ impl Header {
 #[derive(Debug)]
 struct Block {
     header: Header,
-    // _transaction_count: u32,
     _transactions: HashMap<H256, String>,
 }
 
@@ -78,15 +78,14 @@ impl Block {
         let header = Header::new(previous_block_hash, merkle_tree_root);
         Self {
             header,
-            // _transaction_count: TRANSACTIONS_PER_BLOCK,
             _transactions: transactions,
         }
     }
 
     fn genesis() -> Self {
+        // todo: what should the MTR be here?
         Self {
             header: Header::genesis(),
-            // _transaction_count: u32::default(),
             _transactions: HashMap::new(),
         }
     }
