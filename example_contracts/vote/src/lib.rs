@@ -1,10 +1,7 @@
 use std::sync::Arc;
 
 use async_trait::async_trait;
-use denali::{
-    storage::State,
-    types::{H256, Thing},
-};
+use denali::{storage::State, types::Thing};
 use macros::generate_create_thing;
 use semver::Version;
 use serde::Deserialize;
@@ -28,10 +25,10 @@ impl Thing for Vote {
         Version::parse("0.1.0").unwrap()
     }
 
-    async fn run(&self, payload: &str, state: Arc<Mutex<State>>) -> Result<H256> {
+    async fn run(&self, payload: &str, state: Arc<Mutex<State>>) -> Result<bool> {
         println!("vote run");
         vote_program(payload, state).await.unwrap();
-        Ok(H256::dummy())
+        Ok(true)
     }
 
     fn verify(&self) -> Result<bool> {

@@ -1,10 +1,7 @@
 use std::sync::Arc;
 
 use async_trait::async_trait;
-use denali::{
-    storage::State,
-    types::{H256, Thing},
-};
+use denali::{storage::State, types::Thing};
 use macros::generate_create_thing;
 use semver::Version;
 use tokio::sync::Mutex;
@@ -34,7 +31,7 @@ impl Thing for Fake {
         Version::parse("0.1.0").unwrap()
     }
 
-    async fn run(&self, _payload: &str, state: Arc<Mutex<State>>) -> Result<H256> {
+    async fn run(&self, _payload: &str, state: Arc<Mutex<State>>) -> Result<bool> {
         println!("run fake");
         let s = state
             .lock()
@@ -44,7 +41,7 @@ impl Thing for Fake {
         println!("{s:?}");
         // let res = encode("test");
         // Ok(H256::try_from(res).unwrap())
-        Ok(H256::dummy())
+        Ok(true)
     }
 
     fn verify(&self) -> Result<bool> {

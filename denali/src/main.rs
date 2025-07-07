@@ -1,8 +1,12 @@
 use std::{collections::HashMap, sync::Arc};
 
 use denali::{
-    
-    constants::PATH, messaging::receiver_task, plugins::plugin_task::{plugin_builder, plugin_scanner_task}, processor_task, web::web_task::web_task, Transactor
+    Transactor,
+    constants::PATH,
+    messaging::receiver_task,
+    plugins::plugin_task::{plugin_builder, plugin_scanner_task},
+    processor_task,
+    web::web_task::web_task,
 };
 use tokio::{
     join, spawn,

@@ -127,7 +127,7 @@ impl Thing for FakeProgram {
         "fake"
     }
 
-    async fn run(&self, payload: &str, state: Arc<Mutex<State>>) -> serde_json::Result<H256> {
+    async fn run(&self, payload: &str, state: Arc<Mutex<State>>) -> serde_json::Result<bool> {
         println!("run");
         println!("{payload:?}");
         println!("{state:?}");
@@ -142,7 +142,7 @@ impl Thing for FakeProgram {
             .set_value("fake_program", 0);
         println!("{state:?}");
 
-        Ok(H256::dummy())
+        Ok(true)
     }
 
     fn verify(&self) -> serde_json::Result<bool> {

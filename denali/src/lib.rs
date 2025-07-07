@@ -48,7 +48,7 @@ impl Transactor {
         self.chain.get_height()
     }
 
-    async fn parse(&self, message: &Message<Box<dyn Thing + Send + Sync>>) -> Result<H256> {
+    async fn parse(&self, message: &Message<Box<dyn Thing + Send + Sync>>) -> Result<bool> {
         println!("parse");
         if message.program.verify()? {
             let xxx = self.chain.state.clone();
@@ -61,8 +61,7 @@ impl Transactor {
     async fn process_transaction(
         &self,
         transaction: &Message<Box<dyn Thing + Send + Sync>>,
-    ) -> Result<H256> {
-        // fn process_transaction<T: Thing>(&self, transaction: Message<T>) -> Result<H256> {
+    ) -> Result<bool> {
         println!("process_transaction");
 
         self.parse(transaction).await

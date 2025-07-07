@@ -1,10 +1,7 @@
 use std::{collections::HashMap, sync::Arc};
 
 use async_trait::async_trait;
-use denali::{
-    storage::State,
-    types::{H256, Thing},
-};
+use denali::{storage::State, types::Thing};
 use macros::generate_create_thing;
 use rust_decimal::{Decimal, dec};
 use semver::Version;
@@ -28,9 +25,9 @@ impl Thing for Bank {
         Version::parse("0.1.0").unwrap()
     }
 
-    async fn run(&self, payload: &str, _state: Arc<Mutex<State>>) -> Result<H256> {
+    async fn run(&self, payload: &str, _state: Arc<Mutex<State>>) -> Result<bool> {
         bank_program(payload)?;
-        Ok(H256::dummy())
+        Ok(true)
     }
 
     fn verify(&self) -> Result<bool> {

@@ -8,8 +8,7 @@ use hex::encode;
 use sha2::{Digest, Sha256};
 use tokio::sync::Mutex;
 
-use crate::{storage::State, types::H256, constants::VERSION};
-
+use crate::{constants::VERSION, storage::State, types::H256};
 
 #[derive(Clone, Debug)]
 pub struct Header {
