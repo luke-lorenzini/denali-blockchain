@@ -1,14 +1,8 @@
 use std::{collections::HashMap, sync::Arc};
 
 use denali::{
-    Transactor,
-    messaging::{
-        receiver_task,
-        // message_generator_task
-    },
-    plugins::{plugin_task::plugin_builder, plugin_task::plugin_scanner_task},
-    processor_task,
-    web::web_task::web_task,
+    
+    constants::PATH, messaging::receiver_task, plugins::plugin_task::{plugin_builder, plugin_scanner_task}, processor_task, web::web_task::web_task, Transactor
 };
 use tokio::{
     join, spawn,
@@ -23,19 +17,7 @@ async fn main() {
     let contract_map = Arc::new(RwLock::new(HashMap::new()));
     let (plugin_tx, plugin_rx) = channel(100);
 
-    let path = "./plugins";
-
-    // let vote_name = "vote";
-    // let fake_name = "fake";
-    // let bank_name = "bank";
-    // let vote_path = "/home/luke/repos/denali/target/debug/libvote.so";
-    // let fake_path = "/home/luke/repos/denali/target/debug/libfake.so";
-    // let bank_path = "/home/luke/repos/denali/target/debug/libbank.so";
-    // let _ = Plugin::stuff(vote_name, vote_path.as_ref(), contract_map.clone()).await;
-    // let _ = Plugin::stuff(fake_name, fake_path.as_ref(), contract_map.clone()).await;
-    // let _ = Plugin::stuff(bank_name, bank_path.as_ref(), contract_map.clone()).await;
-
-    let plugin_scanner_task = spawn(plugin_scanner_task(path.as_ref(), plugin_tx));
+    let plugin_scanner_task = spawn(plugin_scanner_task(PATH.as_ref(), plugin_tx));
     let plugger_builder_task = spawn(plugin_builder(contract_map.clone(), plugin_rx));
     // let message_generator_task = spawn(message_generator_task(tx.clone()));
     let receiver_task = spawn(receiver_task(tx_msg_queue, rx));

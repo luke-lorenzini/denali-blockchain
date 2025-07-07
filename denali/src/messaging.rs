@@ -10,7 +10,7 @@ use tokio::{
     time::{Duration, sleep},
 };
 
-use crate::types::H256;
+use crate::{constants::BATCH_SIZE, types::H256};
 
 pub struct Meta {}
 
@@ -72,8 +72,6 @@ pub async fn receiver_task(
     tx_msg_queue: Sender<Vec<(String, String, H256)>>,
     mut rx: Receiver<ResponseTx>,
 ) {
-    // todo: move const to a config file
-    const BATCH_SIZE: usize = 10;
     let mut transactions = Vec::new();
 
     while let Some(i) = rx.recv().await {
