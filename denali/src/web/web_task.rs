@@ -10,13 +10,13 @@ use tokio::sync::{RwLock, mpsc::Sender};
 
 use crate::{
     Transactor,
+    messaging::ResponseTx,
     plugins::Plugin,
-    web::WebState,
-    web::endpoints::{chain_height, get_something, root, submit},
+    web::{WebState, endpoints::*},
 };
 
 pub async fn web_task(
-    tx: Sender<(String, String)>,
+    tx: Sender<ResponseTx>,
     transactor: Arc<RwLock<Transactor>>,
     contract_map: Arc<RwLock<HashMap<String, Plugin>>>,
 ) {
@@ -27,9 +27,12 @@ pub async fn web_task(
     };
     let app = Router::new()
         .route("/", get(root))
-        .route("/chain-height", get(chain_height))
+        .route("/chain-height", get(get_height))
+        .route("/tip", get(get_tip))
         .route("/submit", post(submit))
-        .route("/get-something", get(get_something))
+        .route("/is-block", get(is_block))
+        .route("/get-block-header", get(block_header))
+        .route("/get-block-transactions", get(block_transactions))
         .with_state(web_state);
 
     let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await.unwrap();
