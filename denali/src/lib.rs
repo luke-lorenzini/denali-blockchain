@@ -22,7 +22,7 @@ pub mod web;
 pub struct Message<T> {
     pub program: T,
     pub payload: String,
-    tx_id: H256
+    pub tx_id: H256,
 }
 
 #[derive(Debug)]
@@ -155,13 +155,13 @@ mod test {
     #[test]
     fn test_new_chain_from_default() {
         let transactor = Transactor::new();
-        assert_eq!(transactor.chain.get_chain_height(), 1)
+        assert_eq!(transactor.chain.get_height(), 1)
     }
 
     #[test]
     fn test_new_chain_get_height() {
         let transactor = Transactor::default();
-        assert_eq!(transactor.get_chain_height(), 1)
+        assert_eq!(transactor.get_height(), 1)
     }
 
     #[test]
@@ -172,18 +172,19 @@ mod test {
     //     let message = Message {
     //         program: todo!(),
     //         payload: "".into(),
+    //         tx_id: H256::dummy(),
     //     };
     //     let transactor = Transactor::default();
-    //     let res = transactor.process_transaction(message).await;
-    //     // let expected = Ok(H256::default());
-    //     // assert_eq!(res, expected)
+    //     let res = transactor.process_transaction(&message).await;
+    //     let expected = Ok(H256::dummy());
+    //     assert_eq!(res, expected)
     // }
 
     // #[tokio::test]
     // async fn test_process_transactions() {
     //     let transactions = vec![];
     //     let transactor = Transactor::default();
-    //     let res = transactor.process_transactions(transactions).await;
+    //     let res = transactor.process_transactions(H256::dummy(), transactions).await;
     //     let _expected = vec![H256::new([227, 176, 196, 66, 152, 252, 28, 20, 154, 251, 244, 200, 153, 111, 185, 36, 39, 174, 65, 228, 100, 155, 147, 76, 164, 149, 153, 27, 120, 82, 184, 85])];
     //     let expected = vec![];
     //     assert_eq!(res, expected)

@@ -4,10 +4,7 @@ use hex::encode;
 use sha2::{Digest, Sha256};
 use tokio::{
     sync::{
-        mpsc::{
-            Receiver,
-            Sender,
-        },
+        mpsc::{Receiver, Sender},
         oneshot,
     },
     time::{Duration, sleep},

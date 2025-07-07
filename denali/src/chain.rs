@@ -181,7 +181,7 @@ impl Chain {
         for _ in 0..self.count - 1 {
             let x = self.blocks.get(&current);
             if let Some(p) = x {
-                let previous: String = p.header.previous_block_hash.clone().try_into().unwrap();
+                let previous = p.header.previous_block_hash.clone();
                 res.push(previous.clone());
                 current = previous.try_into().unwrap();
             }
@@ -196,22 +196,28 @@ mod test {
 
     #[test]
     fn test_new_header() {
-        let header = Header::new(H256::default(), H256::default());
+        let header = Header::new(H256::zero(), H256::zero());
         assert_eq!(header.version, 0);
     }
 
     #[test]
     fn test_new_genesis_header() {
         let header = Header::genesis();
-        assert_eq!(header._previous_block_hash, H256::default());
-        assert_eq!(header._merkle_tree_root, H256::default());
+        assert_eq!(
+            header.previous_block_hash,
+            String::try_from(H256::zero()).unwrap()
+        );
+        assert_eq!(
+            header._merkle_tree_root,
+            String::try_from(H256::zero()).unwrap()
+        );
     }
 
     #[test]
     fn test_new_chain() {
         let chain = Chain::new();
         let expected = 1;
-        assert_eq!(chain.get_chain_height(), expected)
+        assert_eq!(chain.get_height(), expected)
     }
 
     #[test]
@@ -227,9 +233,10 @@ mod test {
         // assert_eq!(res.header.version, 0)
     }
 
+    #[ignore = "mock sys time"]
     #[test]
     fn test_calc_hash() {
-        let header = Header::new(H256::default(), H256::default());
+        let header = Header::new(H256::zero(), H256::zero());
         let res = header.calc_hash();
         let expected = H256::new([
             222, 71, 201, 178, 126, 184, 211, 0, 219, 181, 242, 195, 83, 230, 50, 195, 147, 38, 44,
@@ -246,6 +253,7 @@ mod test {
         // assert_eq!(res, expected)
     }
 
+    #[ignore = "mock sys time"]
     #[test]
     fn test_get_block_hash() {
         let chain = Chain::new();

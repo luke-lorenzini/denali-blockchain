@@ -22,7 +22,8 @@ async fn test_modify_single_value() {
     .into();
     let message = Message {
         payload,
-        program: fake.as_ref(),
+        program: fake.clone_box(),
+        tx_id: H256::dummy(),
     };
     transactions.push(message);
     let res = transactor.create_new_block(transactions).await;
@@ -41,12 +42,13 @@ async fn test_add_one_block() {
     .into();
     let message = Message {
         payload,
-        program: fake.as_ref(),
+        program: fake.clone_box(),
+        tx_id: H256::dummy(),
     };
     transactions.push(message);
     let res = transactor.create_new_block(transactions).await;
     assert_eq!(res, true);
-    let res = transactor.get_chain_height();
+    let res = transactor.get_height();
     let expected = 2;
     assert_eq!(res, expected)
 }
@@ -54,7 +56,7 @@ async fn test_add_one_block() {
 #[tokio::test]
 async fn test_add_multiple_blocks() {
     let mut transactor = Transactor::new();
-    let mut transactions = Vec::new();
+    let mut transactions = vec![];
     let fake = Box::new(FakeProgram) as Box<dyn Thing>;
 
     let payload = r#"
@@ -64,11 +66,12 @@ async fn test_add_multiple_blocks() {
     .into();
     let message = Message {
         payload,
-        program: fake.as_ref(),
+        program: fake.clone_box(),
+        tx_id: H256::dummy(),
     };
     transactions.push(message);
-    let res = transactor.create_new_block(transactions.clone()).await;
-    transactions.clear();
+    let res = transactor.create_new_block(transactions).await;
+    let mut transactions = vec![];
     assert_eq!(res, true);
 
     let payload = r#"
@@ -78,11 +81,12 @@ async fn test_add_multiple_blocks() {
     .into();
     let message = Message {
         payload,
-        program: fake.as_ref(),
+        program: fake.clone_box(),
+        tx_id: H256::dummy(),
     };
     transactions.push(message);
-    let res = transactor.create_new_block(transactions.clone()).await;
-    transactions.clear();
+    let res = transactor.create_new_block(transactions).await;
+    let mut transactions = vec![];
     assert_eq!(res, true);
 
     let payload = r#"
@@ -92,14 +96,14 @@ async fn test_add_multiple_blocks() {
     .into();
     let message = Message {
         payload,
-        program: fake.as_ref(),
+        program: fake.clone_box(),
+        tx_id: H256::dummy(),
     };
     transactions.push(message);
-    let res = transactor.create_new_block(transactions.clone()).await;
-    transactions.clear();
+    let res = transactor.create_new_block(transactions).await;
     assert_eq!(res, true);
 
-    let res = transactor.get_chain_height();
+    let res = transactor.get_height();
     let expected = 4;
     assert_eq!(res, expected)
 }
@@ -138,7 +142,7 @@ impl Thing for FakeProgram {
             .set_value("fake_program", 0);
         println!("{state:?}");
 
-        Ok(H256::default())
+        Ok(H256::dummy())
     }
 
     fn verify(&self) -> serde_json::Result<bool> {
