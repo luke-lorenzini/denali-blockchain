@@ -140,6 +140,10 @@ impl Chain {
         self.count
     }
 
+    pub(crate) fn get_tip(&self) -> H256 {
+        self.tip.clone()
+    }
+
     pub(crate) fn add_next_block(
         &mut self,
         merkle_tree_root: H256,
@@ -153,10 +157,36 @@ impl Chain {
         true
     }
 
+    pub(crate) fn is_block(&self, block_hash: H256) -> bool {
+        self.blocks.contains_key(&block_hash)
+    }
+
+    pub(crate) fn get_block_header(&self, block_hash: H256) -> Option<Header> {
+        self.blocks.get(&block_hash).map(|h| h.header.clone())
+    }
+
+    pub(crate) fn get_block_transactions(&self, block_hash: H256) -> Option<HashMap<H256, String>> {
+        self.blocks.get(&block_hash).map(|h| h.transactions.clone())
+    }
+
     fn get_block_hash(&self) -> H256 {
-        // self.blocks.last().unwrap().header.calc_hash()
-        // self.blocks.get(&self.tip).unwrap().header.calc_hash()
         self.tip.clone()
+    }
+
+    pub fn get_chain(&self) -> Vec<String> {
+        let mut current = self.tip.clone();
+        let mut res = vec![String::try_from(current.clone()).unwrap()];
+        println!("tip: {:?}", String::try_from(self.tip.clone()).unwrap());
+
+        for _ in 0..self.count-1 {
+            let x = self.blocks.get(&current);
+            if let Some(p) = x {
+                let previous: String = p.header.previous_block_hash.clone().try_into().unwrap();
+                res.push(previous.clone());
+                current = previous.try_into().unwrap();
+            }
+        }
+        res.into_iter().rev().collect()
     }
 }
 
