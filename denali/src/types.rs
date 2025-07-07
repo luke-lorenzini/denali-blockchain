@@ -52,13 +52,9 @@ impl TryFrom<String> for H256 {
     }
 }
 
-// todo: Should be from, not try_from
-impl TryFrom<H256> for String {
-    type Error = &'static str;
-
-    fn try_from(value: H256) -> std::result::Result<Self, Self::Error> {
-        let encoded = encode(value.0);
-        Ok(encoded)
+impl From<H256> for String {
+    fn from(value: H256) -> Self {
+        encode(value.0)
     }
 }
 

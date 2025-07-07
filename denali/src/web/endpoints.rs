@@ -45,14 +45,7 @@ pub async fn get_height(State(state): State<WebState>) -> impl IntoResponse {
 }
 
 pub async fn get_tip(State(state): State<WebState>) -> impl IntoResponse {
-    let tip: String = state
-        .transactor
-        .read()
-        .await
-        .chain
-        .get_tip()
-        .try_into()
-        .unwrap();
+    let tip: String = state.transactor.read().await.chain.get_tip().into();
     (StatusCode::OK, tip)
 }
 
@@ -84,7 +77,7 @@ pub async fn submit(
             let ack_result = state.tx.send(message_to_process);
             let tx_result = response_rx;
             let (_, tx_result) = join!(ack_result, tx_result);
-            let tx_id: String = tx_result.unwrap().tx_id.try_into().unwrap();
+            let tx_id: String = tx_result.unwrap().tx_id.into();
             let msg = format!("tx_id:0x{}\n", tx_id);
             (StatusCode::OK, msg)
         }

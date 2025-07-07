@@ -27,8 +27,8 @@ impl Header {
     fn new(previous_block_hash: H256, merkle_tree_root: H256) -> Self {
         Self {
             version: VERSION,
-            previous_block_hash: previous_block_hash.try_into().unwrap(),
-            _merkle_tree_root: merkle_tree_root.try_into().unwrap(),
+            previous_block_hash: previous_block_hash.into(),
+            _merkle_tree_root: merkle_tree_root.into(),
             // need a better way for handling time todo - utc time, not local
             timestamp: SystemTime::now()
                 .duration_since(UNIX_EPOCH)
@@ -42,8 +42,8 @@ impl Header {
     fn genesis() -> Self {
         Self {
             version: VERSION,
-            previous_block_hash: H256::zero().try_into().unwrap(),
-            _merkle_tree_root: H256::dummy().try_into().unwrap(),
+            previous_block_hash: H256::zero().into(),
+            _merkle_tree_root: H256::dummy().into(),
             // need a better way for handling time - todo utc not local time
             timestamp: SystemTime::now()
                 .duration_since(UNIX_EPOCH)
@@ -175,8 +175,8 @@ impl Chain {
 
     pub fn get_chain(&self) -> Vec<String> {
         let mut current = self.tip.clone();
-        let mut res = vec![String::try_from(current.clone()).unwrap()];
-        println!("tip: {:?}", String::try_from(self.tip.clone()).unwrap());
+        let mut res = vec![String::from(current.clone())];
+        println!("tip: {:?}", String::from(self.tip.clone()));
 
         for _ in 0..self.count - 1 {
             let x = self.blocks.get(&current);
