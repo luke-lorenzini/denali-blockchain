@@ -55,7 +55,7 @@ impl Transactor {
             let res = message.program.run(&message.payload, xxx).await?;
             return Ok(res);
         }
-        todo!()
+        Ok(false)
     }
 
     async fn process_transaction(

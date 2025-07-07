@@ -3,7 +3,7 @@ use std::{
     // str::FromStr
 };
 
-// use rocksdb::{DB, Options};
+use rocksdb::{DB, Options};
 // use serde::de::value;
 
 #[derive(Clone, Debug)]
@@ -17,26 +17,6 @@ impl Default for State {
 
 impl State {
     pub fn new() -> Self {
-        // Start: RocksDB
-        // NB: db is automatically closed at end of lifetime
-        // let tempdir = tempfile::Builder::new()
-        //     .prefix("_path_for_rocksdb_storage")
-        //     .tempdir()
-        //     .expect("Failed to create temporary path for the _path_for_rocksdb_storage");
-        // let path = tempdir.path();
-        // {
-        // let db = DB::open_default(path).unwrap();
-        // db.put(b"my key", b"my value").unwrap();
-        // match db.get(b"my key") {
-        //     Ok(Some(value)) => println!("retrieved value {}", String::from_utf8(value).unwrap()),
-        //     Ok(None) => println!("value not found"),
-        //     Err(e) => println!("operational problem encountered: {}", e),
-        // }
-        // db.delete(b"my key").unwrap();
-        // }
-        // let _ = DB::destroy(&Options::default(), path);
-        // End: RocksDB
-
         let inner = HashMap::new();
         State(inner)
     }
@@ -58,6 +38,7 @@ impl State {
 
         if self.0.contains_key(key) {
             println!("found key");
+            // write_to_db(key, value);
             let val = self.0.get_mut(key).expect("Already checked");
             *val += 1;
         } else {
@@ -67,4 +48,26 @@ impl State {
     }
 
     pub fn new_key_value() {}
+}
+
+fn _write_to_db(_key: &str, _value: u32) {
+    // Start: RocksDB
+    // NB: db is automatically closed at end of lifetime
+    let tempdir = tempfile::Builder::new()
+        .prefix("_path_for_rocksdb_storage")
+        .tempdir()
+        .expect("Failed to create temporary path for the _path_for_rocksdb_storage");
+    let path = tempdir.path();
+    {
+        let db = DB::open_default(path).unwrap();
+        db.put(b"my key", b"my value").unwrap();
+        match db.get(b"my key") {
+            Ok(Some(value)) => println!("retrieved value {}", String::from_utf8(value).unwrap()),
+            Ok(None) => println!("value not found"),
+            Err(e) => println!("operational problem encountered: {}", e),
+        }
+        db.delete(b"my key").unwrap();
+    }
+    let _ = DB::destroy(&Options::default(), path);
+    // End: RocksDB
 }
