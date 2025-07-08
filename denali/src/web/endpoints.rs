@@ -55,6 +55,19 @@ pub async fn get_chain(State(state): State<WebState>) -> impl IntoResponse {
     (StatusCode::OK, result)
 }
 
+pub async fn get_tx(
+    State(state): State<WebState>,
+    Query(params): Query<QueryParams>,
+) -> impl IntoResponse {
+    let tx_id = params.block_hash.try_into();
+    if tx_id.is_ok() {
+        let chain = state.transactor.read().await.chain.get_tx(&tx_id.unwrap());
+        let result = format!("{:?}", chain);
+        return (StatusCode::OK, result);
+    }
+    (StatusCode::BAD_REQUEST, "".into())
+}
+
 pub async fn submit(
     State(state): State<WebState>,
     Json(payload): Json<Params>,
