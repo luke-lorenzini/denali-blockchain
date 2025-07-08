@@ -6,7 +6,8 @@ use sha2::{Digest, Sha256};
 use tokio::sync::{Mutex, RwLock, mpsc::Receiver};
 
 use crate::{
-    chain::Chain,
+    chain::{Chain, Transaction},
+    messaging::Meta,
     plugins::Plugin,
     types::{H256, Thing},
 };
@@ -24,6 +25,7 @@ pub struct Message<T> {
     pub program: T,
     pub payload: String,
     pub tx_id: H256,
+    pub metadata: Meta,
 }
 
 #[derive(Debug)]
@@ -48,20 +50,23 @@ impl Transactor {
         self.chain.get_height()
     }
 
-    async fn parse(&self, message: &Message<Box<dyn Thing + Send + Sync>>) -> Result<bool> {
+    async fn parse(
+        &self,
+        message: &Message<Box<dyn Thing + Send + Sync>>,
+    ) -> Result<(bool, Vec<String>)> {
         println!("parse");
         if message.program.verify()? {
             let xxx = self.chain.state.clone();
             let res = message.program.run(&message.payload, xxx).await?;
             return Ok(res);
         }
-        Ok(false)
+        Ok((false, vec![]))
     }
 
     async fn process_transaction(
         &self,
         transaction: &Message<Box<dyn Thing + Send + Sync>>,
-    ) -> Result<bool> {
+    ) -> Result<(bool, Vec<String>)> {
         println!("process_transaction");
 
         self.parse(transaction).await
@@ -70,7 +75,7 @@ impl Transactor {
     async fn process_transactions(
         &self,
         transactions: Vec<Message<Box<dyn Thing + Send + Sync>>>,
-        transactions_map: Arc<Mutex<HashMap<H256, String>>>,
+        transactions_map: Arc<Mutex<HashMap<H256, Transaction>>>,
     ) -> Vec<H256> {
         // fn process_transactions<T: Thing>(&self, transactions: Vec<Message<T>>) -> H256 {
         println!("process_transactions");
@@ -78,12 +83,19 @@ impl Transactor {
         // let mut hasher = Sha256::new();
         for transaction in transactions {
             // 'tx' that gets written into the tx log should be based on tx details. This needs to be determined before it's processed, deterministically.
-            let _tx = self.process_transaction(&transaction).await.unwrap();
+            let tx = self.process_transaction(&transaction).await.unwrap();
             transactions_map
                 .lock()
                 // .unwrap()
                 .await
-                .insert(transaction.tx_id.clone(), transaction.payload);
+                .insert(
+                    transaction.tx_id.clone(),
+                    Transaction {
+                        tx: transaction.payload,
+                        _metadata: transaction.metadata,
+                        _logs: tx.1,
+                    },
+                );
             // hasher.update(tx.as_ref());
             res.push(transaction.tx_id);
         }
@@ -122,7 +134,7 @@ impl Transactor {
 pub async fn processor_task(
     contract_map: Arc<RwLock<HashMap<String, Plugin>>>,
     transactor: Arc<RwLock<Transactor>>,
-    mut rx_msg_queue: Receiver<Vec<(String, String, H256)>>,
+    mut rx_msg_queue: Receiver<Vec<(H256, String, String, Meta)>>,
 ) {
     // receive a batch of messages
     while let Some(messages) = rx_msg_queue.recv().await {
@@ -130,12 +142,13 @@ pub async fn processor_task(
         for message in messages {
             let program = contract_map.read().await;
             println!("{:?}", message.0);
-            let program = program.get(&message.0).unwrap().thing.clone_box();
+            let program = program.get(&message.1).unwrap().thing.clone_box();
 
             let transaction = Message {
                 program,
-                payload: message.1,
-                tx_id: message.2,
+                payload: message.2,
+                tx_id: message.0,
+                metadata: message.3,
             };
             transactions.push(transaction);
         }

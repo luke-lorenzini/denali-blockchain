@@ -31,7 +31,7 @@ impl Thing for Fake {
         Version::parse("0.1.0").unwrap()
     }
 
-    async fn run(&self, _payload: &str, state: Arc<Mutex<State>>) -> Result<bool> {
+    async fn run(&self, _payload: &str, state: Arc<Mutex<State>>) -> Result<(bool, Vec<String>)> {
         println!("run fake");
         let s = state
             .lock()
@@ -41,7 +41,7 @@ impl Thing for Fake {
         println!("{s:?}");
         // let res = encode("test");
         // Ok(H256::try_from(res).unwrap())
-        Ok(true)
+        Ok((true, vec![]))
     }
 
     fn verify(&self) -> Result<bool> {

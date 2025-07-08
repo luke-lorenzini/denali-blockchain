@@ -25,10 +25,10 @@ impl Thing for Vote {
         Version::parse("0.1.0").unwrap()
     }
 
-    async fn run(&self, payload: &str, state: Arc<Mutex<State>>) -> Result<bool> {
+    async fn run(&self, payload: &str, state: Arc<Mutex<State>>) -> Result<(bool, Vec<String>)> {
         println!("vote run");
-        vote_program(payload, state).await.unwrap();
-        Ok(true)
+        let logs = vote_program(payload, state).await?;
+        Ok((true, logs))
     }
 
     fn verify(&self) -> Result<bool> {
@@ -45,7 +45,7 @@ impl Vote {
     }
 }
 
-async fn vote_program(payload: &str, state: Arc<Mutex<State>>) -> Result<()> {
+async fn vote_program(payload: &str, state: Arc<Mutex<State>>) -> Result<Vec<String>> {
     #[derive(Debug, Deserialize)]
     struct Ballot {
         candidate: String,
@@ -66,7 +66,7 @@ async fn vote_program(payload: &str, state: Arc<Mutex<State>>) -> Result<()> {
         // .unwrap()
         .set_value(&payload.candidate, current_count + 1);
 
-    Ok(())
+    Ok(vec![])
 }
 
 #[cfg(test)]

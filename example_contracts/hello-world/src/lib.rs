@@ -22,9 +22,10 @@ impl Thing for HelloWorld {
         Version::parse("0.1.0").unwrap()
     }
 
-    async fn run(&self, payload: &str, state: Arc<Mutex<State>>) -> Result<bool> {
+    async fn run(&self, payload: &str, state: Arc<Mutex<State>>) -> Result<(bool, Vec<String>)> {
         println!("running hello-world");
-        program(payload, state).await
+        let result = program(payload, state).await?;
+        Ok(result)
     }
 
     fn verify(&self) -> Result<bool> {
@@ -40,15 +41,14 @@ impl HelloWorld {
     }
 }
 
-async fn program(_payload: &str, _state: Arc<Mutex<State>>) -> Result<bool> {
+async fn program(_payload: &str, _state: Arc<Mutex<State>>) -> Result<(bool, Vec<String>)> {
     // need something like this in the "logs" (transaction metadata)
     // Program <YourProgramID> invoke [1]
     // Program log: Hello, Solana!
     // Program log: This is a value: 42
     // Program <YourProgramID> success
 
-
-
+    let mut res = vec!["Hello, Denali".into()];
 
     // #[derive(Debug, Deserialize)]
     // struct Ballot {
@@ -67,5 +67,8 @@ async fn program(_payload: &str, _state: Arc<Mutex<State>>) -> Result<bool> {
     //     .lock()
     //     .await
     //     .set_value(&payload.candidate, current_count + 1);
-    todo!()
+
+    res.push("Program complete".into());
+
+    Ok((true, res))
 }

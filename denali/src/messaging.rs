@@ -11,6 +11,7 @@ use tokio::{
 
 use crate::{constants::BATCH_SIZE, types::H256};
 
+#[derive(Clone, Debug)]
 pub struct Meta {}
 
 pub struct ResponseTx {
@@ -68,7 +69,7 @@ pub async fn message_generator_task(tx: Sender<(String, String, Meta)>) {
 }
 
 pub async fn receiver_task(
-    tx_msg_queue: Sender<Vec<(String, String, H256)>>,
+    tx_msg_queue: Sender<Vec<(H256, String, String, Meta)>>,
     mut rx: Receiver<ResponseTx>,
 ) {
     let mut transactions = Vec::new();
@@ -89,7 +90,7 @@ pub async fn receiver_task(
         };
         let _ = i.one_shot.send(ack);
 
-        transactions.push((i.program, i.payload, tx_id));
+        transactions.push((tx_id, i.program, i.payload, i.metadata));
         if transactions.len() == BATCH_SIZE {
             let batch = std::mem::take(&mut transactions);
             tx_msg_queue.send(batch).await.unwrap();

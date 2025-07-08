@@ -5,7 +5,7 @@ use hex::encode;
 use sha2::{Digest, Sha256};
 use tokio::sync::Mutex;
 
-use crate::{constants::VERSION, storage::State, types::H256};
+use crate::{constants::VERSION, messaging::Meta, storage::State, types::H256};
 
 #[derive(Clone, Debug)]
 pub struct Header {
@@ -62,18 +62,29 @@ impl Header {
 }
 
 #[derive(Clone, Debug)]
+pub struct Transaction {
+    pub tx: String,
+    pub _metadata: Meta,
+    pub _logs: Vec<String>,
+}
+
+#[derive(Clone, Debug)]
 struct Block {
     block_hash: H256,
     header: Header,
-    transactions: HashMap<H256, String>,
+    transactions: HashMap<H256, Transaction>,
 }
 
 impl Block {
     fn new(
         previous_block_hash: H256,
         merkle_tree_root: H256,
-        transactions: HashMap<H256, String>,
+        transactions: HashMap<H256, Transaction>,
     ) -> Self {
+        // Each block contains:
+        // all transactions,
+        // transaction metadata,
+        // logs emitted by each transaction.
         let header = Header::new(previous_block_hash.clone(), merkle_tree_root.clone());
         let block_hash = header.calc_hash();
         Self {
@@ -133,7 +144,7 @@ impl Chain {
     pub(crate) fn add_next_block(
         &mut self,
         merkle_tree_root: H256,
-        transactions: HashMap<H256, String>,
+        transactions: HashMap<H256, Transaction>,
     ) -> bool {
         let block = Block::new(self.get_block_hash(), merkle_tree_root, transactions);
         println!("block: {block:?}");
@@ -151,7 +162,10 @@ impl Chain {
         self.blocks.get(&block_hash).map(|h| h.header.clone())
     }
 
-    pub(crate) fn get_block_transactions(&self, block_hash: H256) -> Option<HashMap<H256, String>> {
+    pub(crate) fn get_block_transactions(
+        &self,
+        block_hash: H256,
+    ) -> Option<HashMap<H256, Transaction>> {
         self.blocks.get(&block_hash).map(|h| h.transactions.clone())
     }
 
@@ -173,6 +187,17 @@ impl Chain {
             }
         }
         res.into_iter().rev().collect()
+    }
+
+    pub fn get_tx(&self, tx_id: &H256) -> String {
+        println!("Looking... {tx_id:?}");
+        for i in self.blocks.iter() {
+            if let Some(v) = i.1.transactions.get(tx_id) {
+                return v.tx.clone();
+            }
+        }
+
+        "".into()
     }
 }
 

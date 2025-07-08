@@ -76,7 +76,7 @@ pub trait Thing: Send + Sync + ThingClone {
     fn name(&self) -> &'static str;
     fn version(&self) -> Version;
     fn verify(&self) -> Result<bool>;
-    async fn run(&self, payload: &str, state: Arc<Mutex<State>>) -> Result<bool>;
+    async fn run(&self, payload: &str, state: Arc<Mutex<State>>) -> Result<(bool, Vec<String>)>;
 }
 
 pub trait ThingClone {

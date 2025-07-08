@@ -3,6 +3,7 @@ use std::sync::Arc;
 use async_trait::async_trait;
 use denali::{
     Message, Transactor,
+    messaging::Meta,
     storage::State,
     types::{H256, Thing},
 };
@@ -24,6 +25,7 @@ async fn test_modify_single_value() {
         payload,
         program: fake.clone_box(),
         tx_id: H256::dummy(),
+        metadata: Meta {},
     };
     transactions.push(message);
     let res = transactor.create_new_block(transactions).await;
@@ -44,6 +46,7 @@ async fn test_add_one_block() {
         payload,
         program: fake.clone_box(),
         tx_id: H256::dummy(),
+        metadata: Meta {},
     };
     transactions.push(message);
     let res = transactor.create_new_block(transactions).await;
@@ -68,6 +71,7 @@ async fn test_add_multiple_blocks() {
         payload,
         program: fake.clone_box(),
         tx_id: H256::dummy(),
+        metadata: Meta {},
     };
     transactions.push(message);
     let res = transactor.create_new_block(transactions).await;
@@ -83,6 +87,7 @@ async fn test_add_multiple_blocks() {
         payload,
         program: fake.clone_box(),
         tx_id: H256::dummy(),
+        metadata: Meta {},
     };
     transactions.push(message);
     let res = transactor.create_new_block(transactions).await;
@@ -98,6 +103,7 @@ async fn test_add_multiple_blocks() {
         payload,
         program: fake.clone_box(),
         tx_id: H256::dummy(),
+        metadata: Meta {},
     };
     transactions.push(message);
     let res = transactor.create_new_block(transactions).await;
@@ -127,7 +133,11 @@ impl Thing for FakeProgram {
         "fake"
     }
 
-    async fn run(&self, payload: &str, state: Arc<Mutex<State>>) -> serde_json::Result<bool> {
+    async fn run(
+        &self,
+        payload: &str,
+        state: Arc<Mutex<State>>,
+    ) -> serde_json::Result<(bool, Vec<String>)> {
         println!("run");
         println!("{payload:?}");
         println!("{state:?}");
@@ -142,7 +152,7 @@ impl Thing for FakeProgram {
             .set_value("fake_program", 0);
         println!("{state:?}");
 
-        Ok(true)
+        Ok((true, vec![]))
     }
 
     fn verify(&self) -> serde_json::Result<bool> {

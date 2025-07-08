@@ -25,9 +25,9 @@ impl Thing for Bank {
         Version::parse("0.1.0").unwrap()
     }
 
-    async fn run(&self, payload: &str, _state: Arc<Mutex<State>>) -> Result<bool> {
-        bank_program(payload)?;
-        Ok(true)
+    async fn run(&self, payload: &str, _state: Arc<Mutex<State>>) -> Result<(bool, Vec<String>)> {
+        let logs = bank_program(payload)?;
+        Ok((true, logs))
     }
 
     fn verify(&self) -> Result<bool> {
@@ -62,7 +62,7 @@ impl Account {
     }
 }
 
-fn bank_program(payload: &str) -> Result<()> {
+fn bank_program(payload: &str) -> Result<Vec<String>> {
     #[derive(Debug, Deserialize)]
     struct BankTransfer {
         payer: u32,
@@ -90,7 +90,7 @@ fn bank_program(payload: &str) -> Result<()> {
         todo!("Missing an account")
     }
 
-    Ok(())
+    Ok(vec![])
 }
 
 #[cfg(test)]
