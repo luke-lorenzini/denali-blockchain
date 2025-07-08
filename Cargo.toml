@@ -3,6 +3,7 @@ resolver = "3"
 members = [
     "example_contracts/bank", 
     "example_contracts/fake", 
+    "example_contracts/hello-world", 
     "example_contracts/vote", 
     "denali", 
     "macros"

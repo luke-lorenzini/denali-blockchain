@@ -1,0 +1,22 @@
+[package]
+name = "hello-world"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+denali = { path = "../../denali" }
+macros = { path = "../../macros" }
+
+async-trait.workspace = true
+hex.workspace = true
+log.workspace = true
+rust_decimal.workspace = true
+semver.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+tokio.workspace = true
+
+[lib]
+crate-type = [
+    "cdylib",
+]
