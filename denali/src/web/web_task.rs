@@ -15,6 +15,7 @@ use crate::{
     web::{WebState, endpoints::*},
 };
 
+#[tracing::instrument]
 pub async fn web_task(
     tx: Sender<ResponseTx>,
     transactor: Arc<RwLock<Transactor>>,

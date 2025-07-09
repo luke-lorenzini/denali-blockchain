@@ -63,7 +63,8 @@ impl Transactor {
         Ok((false, vec![]))
     }
 
-    async fn process_transaction(
+    // this might not be needed, it's just a pass through
+    async fn _process_transaction(
         &self,
         transaction: &Message<Box<dyn Thing + Send + Sync>>,
     ) -> Result<(bool, Vec<String>)> {
@@ -83,7 +84,8 @@ impl Transactor {
         // let mut hasher = Sha256::new();
         for transaction in transactions {
             // 'tx' that gets written into the tx log should be based on tx details. This needs to be determined before it's processed, deterministically.
-            let tx = self.process_transaction(&transaction).await.unwrap();
+            // let tx = self.process_transaction(&transaction).await.unwrap();
+            let tx = self.parse(&transaction).await.unwrap();
             transactions_map
                 .lock()
                 // .unwrap()
@@ -131,6 +133,7 @@ impl Transactor {
     }
 }
 
+#[tracing::instrument]
 pub async fn processor_task(
     contract_map: Arc<RwLock<HashMap<String, Plugin>>>,
     transactor: Arc<RwLock<Transactor>>,
@@ -139,9 +142,10 @@ pub async fn processor_task(
     // receive a batch of messages
     while let Some(messages) = rx_msg_queue.recv().await {
         let mut transactions = Vec::new();
+        // this loop can be parallelized, maybe
         for message in messages {
             let program = contract_map.read().await;
-            println!("{:?}", message.0);
+            // println!("{:?}", message.0);
             let program = program.get(&message.1).unwrap().thing.clone_box();
 
             let transaction = Message {

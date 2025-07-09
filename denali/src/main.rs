@@ -13,8 +13,10 @@ use tokio::{
     sync::{RwLock, mpsc::channel},
 };
 
-#[tokio::main]
+#[tokio::main(flavor = "multi_thread")]
 async fn main() {
+    console_subscriber::init();
+
     let transactor = Arc::new(RwLock::new(Transactor::new()));
     let (tx, rx) = channel(100);
     let (tx_msg_queue, rx_msg_queue) = channel(100);
@@ -22,7 +24,7 @@ async fn main() {
     let (plugin_tx, plugin_rx) = channel(100);
 
     let plugin_scanner_task = spawn(plugin_scanner_task(PATH.as_ref(), plugin_tx));
-    let plugger_builder_task = spawn(plugin_builder(contract_map.clone(), plugin_rx));
+    let plugin_builder_task = spawn(plugin_builder(contract_map.clone(), plugin_rx));
     // let message_generator_task = spawn(message_generator_task(tx.clone()));
     let receiver_task = spawn(receiver_task(tx_msg_queue, rx));
     let processor_task = spawn(processor_task(
@@ -38,7 +40,7 @@ async fn main() {
         receiver_task,
         plugin_scanner_task,
         web_task,
-        plugger_builder_task
+        plugin_builder_task
     );
 
     // let handles = spawn_all_tasks(

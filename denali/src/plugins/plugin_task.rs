@@ -16,6 +16,7 @@ use tokio::sync::{
 
 use crate::plugins::Plugin;
 
+#[tracing::instrument]
 pub async fn plugin_builder(
     contract_map: Arc<RwLock<HashMap<String, Plugin>>>,
     mut plugin_rx: TokioReceive<(&str, Option<Plugin>)>,
@@ -32,6 +33,7 @@ pub async fn plugin_builder(
     }
 }
 
+#[tracing::instrument]
 pub async fn plugin_scanner_task(path: &Path, plugin_tx: Sender<(&str, Option<Plugin>)>) {
     search_for_existing_plugins(path, plugin_tx.clone()).await;
 

@@ -68,6 +68,7 @@ pub async fn message_generator_task(tx: Sender<(String, String, Meta)>) {
     }
 }
 
+#[tracing::instrument]
 pub async fn receiver_task(
     tx_msg_queue: Sender<Vec<(H256, String, String, Meta)>>,
     mut rx: Receiver<ResponseTx>,
