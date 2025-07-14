@@ -18,7 +18,7 @@ async fn main() {
     // #[cfg(feature = "console")]
     // console_subscriber::init();
 
-    let transactor = Arc::new(RwLock::new(Transactor::new()));
+    let transactor = Arc::new(RwLock::new(Transactor::new(false)));
     let (tx, rx) = channel(100);
     let (tx_msg_queue, rx_msg_queue) = channel(100);
     let contract_map = Arc::new(RwLock::new(HashMap::new()));
