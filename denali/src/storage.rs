@@ -4,7 +4,6 @@ use std::{
 };
 
 use rocksdb::{DB, Options};
-// use serde::de::value;
 
 #[derive(Clone, Debug)]
 pub struct State(HashMap<String, u32>);

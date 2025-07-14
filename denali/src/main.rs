@@ -15,7 +15,8 @@ use tokio::{
 
 #[tokio::main(flavor = "multi_thread")]
 async fn main() {
-    console_subscriber::init();
+    // #[cfg(feature = "console")]
+    // console_subscriber::init();
 
     let transactor = Arc::new(RwLock::new(Transactor::new()));
     let (tx, rx) = channel(100);
