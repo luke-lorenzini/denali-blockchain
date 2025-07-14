@@ -159,7 +159,7 @@ impl Chain {
         true
     }
 
-    pub fn add_received_block(&mut self, encoded_block: &[u8]) -> bool {
+    pub fn _add_received_block(&mut self, encoded_block: &[u8]) -> bool {
         let block = from_slice::<Block>(encoded_block).unwrap();
         println!("block: {block:?}");
         self.tip = Some(block.block_hash.clone());
@@ -214,7 +214,7 @@ impl Chain {
         "".into()
     }
 
-    pub fn transmit_block(&self, block_hash: &H256) -> Vec<u8> {
+    pub fn _transmit_block(&self, block_hash: &H256) -> Vec<u8> {
         let x: &Block = self.blocks.get(block_hash).unwrap();
         let encoded_block = to_vec(x).unwrap();
         let decoded_block = from_slice::<Block>(&encoded_block).unwrap();
@@ -232,7 +232,7 @@ mod test {
     fn test_transmit_block() {
         let block_hash = H256::zero();
         let chain = Chain::new(false);
-        let res = chain.transmit_block(&block_hash);
+        let res = chain._transmit_block(&block_hash);
         println!("res: {res:?}");
     }
 
@@ -241,8 +241,8 @@ mod test {
         let block_hash = H256::zero();
         let host_chain = Chain::new(false);
         let mut client_chain = Chain::new(true);
-        let encoded_block = host_chain.transmit_block(&block_hash);
-        let res = client_chain.add_received_block(&encoded_block);
+        let encoded_block = host_chain._transmit_block(&block_hash);
+        let res = client_chain._add_received_block(&encoded_block);
         assert!(res);
         let count = client_chain.count;
         assert_eq!(count, 1);
