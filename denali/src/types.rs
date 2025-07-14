@@ -4,6 +4,7 @@ use std::{
 };
 
 use async_trait::async_trait;
+use borsh::{BorshDeserialize, BorshSerialize};
 use derive_more::AsRef;
 use hex::{decode, encode};
 use semver::Version;
@@ -12,7 +13,9 @@ use serde_json::{Result, Value};
 
 use crate::storage::State;
 
-#[derive(AsRef, Clone, Debug, Eq, Hash, PartialEq)]
+#[derive(AsRef, 
+    BorshDeserialize, BorshSerialize, 
+    Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub struct H256([u8; 32]);
 
 impl H256 {

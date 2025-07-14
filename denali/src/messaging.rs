@@ -1,3 +1,4 @@
+use borsh::{BorshDeserialize, BorshSerialize};
 use chrono::Utc;
 use hex::encode;
 use sha2::{Digest, Sha256};
@@ -11,7 +12,9 @@ use tokio::{
 
 use crate::{constants::BATCH_SIZE, types::H256};
 
-#[derive(Clone, Debug)]
+#[derive(
+    BorshDeserialize, BorshSerialize, 
+    Clone, Debug, PartialEq)]
 pub struct Meta {}
 
 pub struct ResponseTx {

@@ -33,15 +33,9 @@ pub struct Transactor {
     chain: Chain,
 }
 
-impl Default for Transactor {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
 impl Transactor {
-    pub fn new() -> Self {
-        let chain = Chain::new();
+    pub fn new(replica: bool) -> Self {
+        let chain = Chain::new(replica);
         Transactor { chain }
     }
 
@@ -171,13 +165,13 @@ mod test {
 
     #[test]
     fn test_new_chain_from_default() {
-        let transactor = Transactor::new();
+        let transactor = Transactor::new(false);
         assert_eq!(transactor.chain.get_height(), 1)
     }
 
     #[test]
     fn test_new_chain_get_height() {
-        let transactor = Transactor::default();
+        let transactor = Transactor::new(false);
         assert_eq!(transactor.get_height(), 1)
     }
 
@@ -210,7 +204,7 @@ mod test {
     #[tokio::test]
     async fn test_create_new_block() {
         let messages = vec![];
-        let mut transactor = Transactor::new();
+        let mut transactor = Transactor::new(false);
         let res = transactor.create_new_block(messages).await;
         let expected = true;
         assert_eq!(res, expected)

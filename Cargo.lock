@@ -629,6 +629,7 @@ version = "0.1.0"
 dependencies = [
  "async-trait",
  "axum 0.8.4",
+ "borsh",
  "chrono",
  "console-subscriber",
  "dashmap",
@@ -3020,6 +3021,7 @@ name = "vote"
 version = "0.1.0"
 dependencies = [
  "async-trait",
+ "borsh",
  "denali",
  "log",
  "macros",

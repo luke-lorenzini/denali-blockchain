@@ -1,12 +1,15 @@
 use std::{collections::HashMap, sync::Arc};
 
+use borsh::{from_slice, to_vec, BorshDeserialize, BorshSerialize};
 use chrono::Utc;
 use hex::encode;
 use sha2::{Digest, Sha256};
 
 use crate::{constants::VERSION, messaging::Meta, storage::State, types::H256};
 
-#[derive(Clone, Debug)]
+#[derive(
+    BorshDeserialize, BorshSerialize, 
+    Clone, Debug, PartialEq)]
 pub struct Header {
     version: u32,
     previous_block_hash: String,
@@ -60,14 +63,18 @@ impl Header {
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(
+    BorshDeserialize, BorshSerialize, 
+    Clone, Debug, PartialEq)]
 pub struct Transaction {
     pub tx: String,
     pub _metadata: Meta,
     pub _logs: Vec<String>,
 }
 
-#[derive(Clone, Debug)]
+#[derive(
+    BorshDeserialize, BorshSerialize, 
+    Clone, Debug, PartialEq)]
 struct Block {
     block_hash: H256,
     header: Header,
@@ -108,22 +115,21 @@ pub struct Chain {
     blocks: HashMap<H256, Block>,
     count: u32,
     pub state: Arc<State>,
-    tip: H256,
-}
-
-impl Default for Chain {
-    fn default() -> Self {
-        Self::new()
-    }
+    tip: Option<H256>,
 }
 
 impl Chain {
-    pub(crate) fn new() -> Self {
-        let genesis = Block::genesis();
-        let tip = genesis.block_hash.clone();
+    pub(crate) fn new(replica: bool) -> Self {
         let mut blocks = HashMap::new();
-        blocks.insert(tip.clone(), genesis);
         let state = Arc::new(State::new());
+        let tip = if replica {
+            None
+        } else {
+            let genesis = Block::genesis();
+            let tip = genesis.block_hash.clone();
+            blocks.insert(tip.clone(), genesis);
+            Some(tip)
+        };
         Self {
             count: blocks.len().try_into().unwrap(),
             blocks,
@@ -136,8 +142,8 @@ impl Chain {
         self.count
     }
 
-    pub(crate) fn get_tip(&self) -> &H256 {
-        &self.tip
+    pub(crate) fn get_tip(&self) -> H256 {
+        self.tip.clone().unwrap()
     }
 
     pub(crate) fn add_next_block(
@@ -147,8 +153,17 @@ impl Chain {
     ) -> bool {
         let block = Block::new(self.get_block_hash().to_owned(), merkle_tree_root, transactions);
         println!("block: {block:?}");
-        self.tip = block.block_hash.clone();
-        self.blocks.insert(self.tip.clone(), block);
+        self.tip = Some(block.block_hash.clone());
+        self.blocks.insert(self.tip.clone().unwrap(), block);
+        self.count += 1;
+        true
+    }
+
+    pub fn add_received_block(&mut self, encoded_block: &[u8]) -> bool {
+        let block = from_slice::<Block>(encoded_block).unwrap();
+        println!("block: {block:?}");
+        self.tip = Some(block.block_hash.clone());
+        self.blocks.insert(self.tip.clone().unwrap(), block);
         self.count += 1;
         true
     }
@@ -168,14 +183,14 @@ impl Chain {
         self.blocks.get(&block_hash).map(|h| h.transactions.clone())
     }
 
-    fn get_block_hash(&self) -> &H256 {
-        &self.tip
+    fn get_block_hash(&self) -> H256 {
+        self.tip.clone().unwrap()
     }
 
     pub fn get_chain(&self) -> Vec<String> {
-        let mut current = self.tip.clone();
+        let mut current = self.tip.clone().unwrap();
         let mut res = vec![String::from(current.clone())];
-        println!("tip: {:?}", String::from(self.tip.clone()));
+        println!("tip: {:?}", String::from(self.tip.clone().unwrap()));
 
         for _ in 0..self.count - 1 {
             let x = self.blocks.get(&current);
@@ -198,11 +213,40 @@ impl Chain {
 
         "".into()
     }
+
+    pub fn transmit_block(&self, block_hash: &H256) -> Vec<u8> {
+        let x: &Block = self.blocks.get(block_hash).unwrap();
+        let encoded_block = to_vec(x).unwrap();
+        let decoded_block = from_slice::<Block>(&encoded_block).unwrap();
+        assert_eq!(&decoded_block, x);
+        println!("encoded_block: {encoded_block:?}");
+        encoded_block
+    }
 }
 
 #[cfg(test)]
 mod test {
     use super::*;
+
+    #[test]
+    fn test_transmit_block() {
+        let block_hash = H256::zero();
+        let chain = Chain::new(false);
+        let res = chain.transmit_block(&block_hash);
+        println!("res: {res:?}");
+    }
+
+    #[test]
+    fn test_add_received_block() {
+        let block_hash = H256::zero();
+        let host_chain = Chain::new(false);
+        let mut client_chain = Chain::new(true);
+        let encoded_block = host_chain.transmit_block(&block_hash);
+        let res = client_chain.add_received_block(&encoded_block);
+        assert!(res);
+        let count = client_chain.count;
+        assert_eq!(count, 1);
+    }
 
     #[test]
     fn test_new_header() {
@@ -225,14 +269,14 @@ mod test {
 
     #[test]
     fn test_new_chain() {
-        let chain = Chain::new();
+        let chain = Chain::new(false);
         let expected = 1;
         assert_eq!(chain.get_height(), expected)
     }
 
     #[test]
     fn test_new_chain_from_default() {
-        let chain = Chain::default();
+        let chain = Chain::new(false);
         let expected = 1;
         assert_eq!(chain.count, expected)
     }
@@ -266,7 +310,7 @@ mod test {
     #[ignore = "mock sys time"]
     #[test]
     fn test_get_block_hash() {
-        let chain = Chain::new();
+        let chain = Chain::new(false);
         let res = chain.get_block_hash().to_owned();
         let expected = H256::new([
             222, 71, 201, 178, 126, 184, 211, 0, 219, 181, 242, 195, 83, 230, 50, 195, 147, 38, 44,

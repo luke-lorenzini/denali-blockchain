@@ -7,7 +7,7 @@ default-run = "denali"
 [dependencies]
 async-trait.workspace = true
 axum.workspace = true
-# borsh = { workspace = true, features = ["derive"] }
+borsh.workspace = true
 chrono.workspace = true
 console-subscriber.workspace = true
 dashmap.workspace = true
