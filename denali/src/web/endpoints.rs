@@ -45,7 +45,7 @@ pub async fn get_height(State(state): State<WebState>) -> impl IntoResponse {
 }
 
 pub async fn get_tip(State(state): State<WebState>) -> impl IntoResponse {
-    let tip: String = state.transactor.read().await.chain.get_tip().into();
+    let tip = state.transactor.read().await.chain.get_tip().to_string();
     (StatusCode::OK, tip)
 }
 

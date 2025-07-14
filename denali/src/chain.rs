@@ -137,8 +137,8 @@ impl Chain {
         self.count
     }
 
-    pub(crate) fn get_tip(&self) -> H256 {
-        self.tip.clone()
+    pub(crate) fn get_tip(&self) -> &H256 {
+        &self.tip
     }
 
     pub(crate) fn add_next_block(
@@ -146,7 +146,7 @@ impl Chain {
         merkle_tree_root: H256,
         transactions: HashMap<H256, Transaction>,
     ) -> bool {
-        let block = Block::new(self.get_block_hash(), merkle_tree_root, transactions);
+        let block = Block::new(self.get_block_hash().to_owned(), merkle_tree_root, transactions);
         println!("block: {block:?}");
         self.tip = block.block_hash.clone();
         self.blocks.insert(self.tip.clone(), block);
@@ -169,8 +169,8 @@ impl Chain {
         self.blocks.get(&block_hash).map(|h| h.transactions.clone())
     }
 
-    fn get_block_hash(&self) -> H256 {
-        self.tip.clone()
+    fn get_block_hash(&self) -> &H256 {
+        &self.tip
     }
 
     pub fn get_chain(&self) -> Vec<String> {
@@ -268,7 +268,7 @@ mod test {
     #[test]
     fn test_get_block_hash() {
         let chain = Chain::new();
-        let res = chain.get_block_hash();
+        let res = chain.get_block_hash().to_owned();
         let expected = H256::new([
             222, 71, 201, 178, 126, 184, 211, 0, 219, 181, 242, 195, 83, 230, 50, 195, 147, 38, 44,
             240, 99, 64, 196, 250, 127, 27, 64, 196, 203, 211, 111, 144,
