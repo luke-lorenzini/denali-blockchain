@@ -3,7 +3,6 @@ use std::{collections::HashMap, sync::Arc};
 use chrono::Utc;
 use hex::encode;
 use sha2::{Digest, Sha256};
-use tokio::sync::Mutex;
 
 use crate::{constants::VERSION, messaging::Meta, storage::State, types::H256};
 
@@ -108,7 +107,7 @@ impl Block {
 pub struct Chain {
     blocks: HashMap<H256, Block>,
     count: u32,
-    pub state: Arc<Mutex<State>>,
+    pub state: Arc<State>,
     tip: H256,
 }
 
@@ -124,7 +123,7 @@ impl Chain {
         let tip = genesis.block_hash.clone();
         let mut blocks = HashMap::new();
         blocks.insert(tip.clone(), genesis);
-        let state = Arc::new(Mutex::new(State::new()));
+        let state = Arc::new(State::new());
         Self {
             count: blocks.len().try_into().unwrap(),
             blocks,

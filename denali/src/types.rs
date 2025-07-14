@@ -9,7 +9,6 @@ use hex::{decode, encode};
 use semver::Version;
 use serde::{Deserialize, Serialize};
 use serde_json::{Result, Value};
-use tokio::sync::Mutex;
 
 use crate::storage::State;
 
