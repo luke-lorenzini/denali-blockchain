@@ -9,7 +9,6 @@ use denali::{
 };
 use semver::Version;
 use serde::Deserialize;
-use tokio::sync::Mutex;
 
 #[tokio::test]
 async fn test_modify_single_value() {
@@ -136,7 +135,7 @@ impl Thing for FakeProgram {
     async fn run(
         &self,
         payload: &str,
-        state: Arc<Mutex<State>>,
+        state: Arc<State>,
     ) -> serde_json::Result<(bool, Vec<String>)> {
         println!("run");
         println!("{payload:?}");
@@ -146,8 +145,8 @@ impl Thing for FakeProgram {
         println!("{xxx:?}");
 
         state
-            .lock()
-            .await
+            // .lock()
+            // .await
             // .unwrap()
             .set_value("fake_program", 0);
         println!("{state:?}");

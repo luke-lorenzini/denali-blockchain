@@ -5,7 +5,6 @@ use denali::{storage::State, types::Thing};
 use macros::generate_create_thing;
 use semver::Version;
 use serde_json::Result;
-use tokio::sync::Mutex;
 // use serde::Deserialize;
 
 #[generate_create_thing(args())]
@@ -22,7 +21,7 @@ impl Thing for HelloWorld {
         Version::parse("0.1.0").unwrap()
     }
 
-    async fn run(&self, payload: &str, state: Arc<Mutex<State>>) -> Result<(bool, Vec<String>)> {
+    async fn run(&self, payload: &str, state: Arc<State>) -> Result<(bool, Vec<String>)> {
         println!("running hello-world");
         let result = program(payload, state).await?;
         Ok(result)
@@ -41,7 +40,7 @@ impl HelloWorld {
     }
 }
 
-async fn program(_payload: &str, _state: Arc<Mutex<State>>) -> Result<(bool, Vec<String>)> {
+async fn program(_payload: &str, _state: Arc<State>) -> Result<(bool, Vec<String>)> {
     // need something like this in the "logs" (transaction metadata)
     // Program <YourProgramID> invoke [1]
     // Program log: Hello, Solana!

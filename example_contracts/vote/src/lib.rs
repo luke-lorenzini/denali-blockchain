@@ -6,7 +6,6 @@ use macros::generate_create_thing;
 use semver::Version;
 use serde::Deserialize;
 use serde_json::Result;
-use tokio::sync::Mutex;
 
 const CANDIDATES: u32 = 3;
 #[generate_create_thing(args(CANDIDATES))]
@@ -25,7 +24,7 @@ impl Thing for Vote {
         Version::parse("0.1.0").unwrap()
     }
 
-    async fn run(&self, payload: &str, state: Arc<Mutex<State>>) -> Result<(bool, Vec<String>)> {
+    async fn run(&self, payload: &str, state: Arc<State>) -> Result<(bool, Vec<String>)> {
         println!("vote run");
         let logs = vote_program(payload, state).await?;
         Ok((true, logs))
@@ -45,7 +44,7 @@ impl Vote {
     }
 }
 
-async fn vote_program(payload: &str, state: Arc<Mutex<State>>) -> Result<Vec<String>> {
+async fn vote_program(payload: &str, state: Arc<State>) -> Result<Vec<String>> {
     #[derive(Debug, Deserialize)]
     struct Ballot {
         candidate: String,
@@ -55,14 +54,14 @@ async fn vote_program(payload: &str, state: Arc<Mutex<State>>) -> Result<Vec<Str
     println!("payload: {payload:?}");
 
     let current_count = state
-        .lock()
-        .await
+        // .lock()
+        // .await
         // .unwrap()
         .get_value(&payload.candidate);
     println!("{current_count:?}");
     state
-        .lock()
-        .await
+        // .lock()
+        // .await
         // .unwrap()
         .set_value(&payload.candidate, current_count + 1);
 

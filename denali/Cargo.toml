@@ -7,8 +7,10 @@ default-run = "denali"
 [dependencies]
 async-trait.workspace = true
 axum.workspace = true
+# borsh = { workspace = true, features = ["derive"] }
 chrono.workspace = true
 console-subscriber.workspace = true
+dashmap.workspace = true
 derive_more.workspace = true
 futures.workspace = true
 glob.workspace = true
@@ -16,6 +18,7 @@ hex.workspace = true
 libloading.workspace = true
 log.workspace = true
 notify.workspace = true
+# quinn.workspace = true
 rocksdb.workspace = true
 semver.workspace = true
 serde.workspace = true
@@ -23,4 +26,5 @@ serde_json.workspace = true
 sha2.workspace = true
 tempfile.workspace = true
 tokio.workspace = true
+# tonic.workspace = true
 tracing.workspace = true

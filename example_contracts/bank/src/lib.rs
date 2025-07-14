@@ -7,7 +7,6 @@ use rust_decimal::{Decimal, dec};
 use semver::Version;
 use serde::Deserialize;
 use serde_json::Result;
-use tokio::sync::Mutex;
 
 #[generate_create_thing(args(vec![]))]
 #[derive(Clone, Debug)]
@@ -25,7 +24,7 @@ impl Thing for Bank {
         Version::parse("0.1.0").unwrap()
     }
 
-    async fn run(&self, payload: &str, _state: Arc<Mutex<State>>) -> Result<(bool, Vec<String>)> {
+    async fn run(&self, payload: &str, _state: Arc<State>) -> Result<(bool, Vec<String>)> {
         let logs = bank_program(payload)?;
         Ok((true, logs))
     }

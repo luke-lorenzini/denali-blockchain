@@ -1,13 +1,8 @@
-use std::{
-    collections::HashMap,
-    // str::FromStr
-};
-
+use dashmap::DashMap;
 use rocksdb::{DB, Options};
 
 #[derive(Clone, Debug)]
-pub struct State(HashMap<String, u32>);
-
+pub struct State(DashMap<String, u32>);
 impl Default for State {
     fn default() -> Self {
         Self::new()
@@ -16,7 +11,7 @@ impl Default for State {
 
 impl State {
     pub fn new() -> Self {
-        let inner = HashMap::new();
+        let inner = DashMap::new();
         State(inner)
     }
 
@@ -32,13 +27,13 @@ impl State {
         }
     }
 
-    pub fn set_value(&mut self, key: &str, value: u32) {
+    pub fn set_value(&self, key: &str, value: u32) {
         println!("key: {key:?}");
 
         if self.0.contains_key(key) {
             println!("found key");
             // write_to_db(key, value);
-            let val = self.0.get_mut(key).expect("Already checked");
+            let mut val = self.0.get_mut(key).expect("Already checked");
             *val += 1;
         } else {
             println!("didn't found key");

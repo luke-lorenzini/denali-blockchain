@@ -4,7 +4,6 @@ use async_trait::async_trait;
 use denali::{storage::State, types::Thing};
 use macros::generate_create_thing;
 use semver::Version;
-use tokio::sync::Mutex;
 // use hex::encode;
 // use log::debug;
 // use serde::Deserialize;
@@ -31,11 +30,11 @@ impl Thing for Fake {
         Version::parse("0.1.0").unwrap()
     }
 
-    async fn run(&self, _payload: &str, state: Arc<Mutex<State>>) -> Result<(bool, Vec<String>)> {
+    async fn run(&self, _payload: &str, state: Arc<State>) -> Result<(bool, Vec<String>)> {
         println!("run fake");
         let s = state
-            .lock()
-            .await
+            // .lock()
+            // .await
             // .unwrap()
             .get_value("test");
         println!("{s:?}");

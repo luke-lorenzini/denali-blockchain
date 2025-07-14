@@ -13,7 +13,9 @@ members = [
 [workspace.dependencies]
 async-trait = "0.1.88"
 axum = "0.8.4"
+# borsh = "1.5.7"
 chrono = "0.4.41"
+dashmap = "6.1.0"
 derive_more = { version = "2.0.1", features = ["as_ref"] }
 console-subscriber = "0.4.1"
 futures = "0.3.31"
@@ -23,6 +25,7 @@ hex = "0.4.3"
 libloading = "0.8.8"
 log = "0.4.27"
 notify = "8.0.0"
+# quinn = "0.11.8"
 quote = "1.0.40"
 rocksdb = "0.23.0"
 rust_decimal = { version = "1.37.1", features = ["macros"] }
