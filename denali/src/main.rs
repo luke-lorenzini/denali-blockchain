@@ -6,6 +6,7 @@ use denali::{
     messaging::receiver_task,
     plugins::plugin_task::{plugin_builder, plugin_scanner_task},
     processor_task,
+    quinn::{client::start_quinn_client, server::start_quinn_server},
     web::web_task::web_task,
 };
 use tokio::{
@@ -17,6 +18,19 @@ use tokio::{
 async fn main() {
     // #[cfg(feature = "console")]
     // console_subscriber::init();
+
+    let replica = true;
+
+    let handle = if !replica {
+        spawn(async {
+            let _res = start_quinn_server().await;
+        })
+    } else {
+        spawn(async {
+            let _res = start_quinn_client().await; 
+        })
+    };
+    let _r = join!(handle);
 
     let transactor = Arc::new(RwLock::new(Transactor::new(false)));
     let (tx, rx) = channel(100);
