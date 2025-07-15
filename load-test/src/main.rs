@@ -52,8 +52,8 @@ async fn _website_login(user: &mut GooseUser) -> TransactionResult {
 
 async fn submit_hello_world(user: &mut GooseUser) -> TransactionResult {
     let payload = json!({
-        "program": "hello-world",
-        "payload": { "fake": 0 }
+        "program": "vote",
+        "payload": { "candidate": "0" }
     });
 
     let _response = user.post_json("/submit", &payload).await?;
