@@ -1,5 +1,6 @@
 use std::{collections::HashMap, sync::Arc};
 
+use clap::Parser;
 use denali::{
     Transactor,
     constants::PATH,
@@ -14,12 +15,20 @@ use tokio::{
     sync::{RwLock, mpsc::channel},
 };
 
+#[derive(Debug, Parser)]
+#[command(version, about, long_about = None)]
+struct Args {
+    #[clap(short, long, default_value_t = false, action = clap::ArgAction::Set)]
+    replica: bool,
+}
+
 #[tokio::main(flavor = "multi_thread")]
 async fn main() {
     // #[cfg(feature = "console")]
     // console_subscriber::init();
 
-    let replica = true;
+    let args = Args::parse();
+    let replica = args.replica;
 
     let handle = if !replica {
         spawn(async {
