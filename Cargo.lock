@@ -738,22 +738,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "fake"
-version = "0.1.0"
-dependencies = [
- "async-trait",
- "denali",
- "hex",
- "log",
- "macros",
- "rust_decimal",
- "semver",
- "serde",
- "serde_json",
- "tokio",
-]
-
-[[package]]
 name = "fastrand"
 version = "2.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
