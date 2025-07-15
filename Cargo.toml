@@ -16,6 +16,7 @@ borsh = { version = "1.5.7", features = ["derive"] }
 chrono = "0.4.41"
 clap = { version = "4.5.41", features = ["derive"] }
 dashmap = "6.1.0"
+console-subscriber = "0.4.1"
 derive_more = { version = "2.0.1", features = ["as_ref"] }
 directories-next = "2.0.0"
 futures = "0.3.31"
