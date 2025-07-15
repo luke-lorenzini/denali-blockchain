@@ -5,13 +5,13 @@ use std::{error::Error, fs, io, net::{IpAddr, Ipv4Addr, SocketAddr}, path::{self
 use directories_next::ProjectDirs;
 use log::{error, info};
 use quinn::{Endpoint, ServerConfig};
-// use proto::crypto::rustls::QuicServerConfig;
 // use rustls::KeyLogFile;
 use rustls::pki_types::{CertificateDer, PrivateKeyDer, 
     // PrivatePkcs8KeyDer
 };
 use quinn_proto::crypto::rustls::QuicServerConfig;
-// use tokio::fs;
+
+use crate::quinn::ALPN_QUIC_HTTP;
 
 // #[derive(Parser, Debug)]
 // #[clap(name = "server")]
@@ -110,7 +110,7 @@ pub async fn start_quinn_server() -> Result<(), Box<dyn Error>>{
     let mut server_crypto = rustls::ServerConfig::builder()
         .with_no_client_auth()
         .with_single_cert(certs, key)?;
-    server_crypto.alpn_protocols = common::ALPN_QUIC_HTTP.iter().map(|&x| x.into()).collect();
+    server_crypto.alpn_protocols = ALPN_QUIC_HTTP.iter().map(|&x| x.into()).collect();
     // if options.keylog {
     //     server_crypto.key_log = Arc::new(KeyLogFile::new());
     // }
@@ -277,9 +277,4 @@ fn process_get(root: &Path, x: &[u8]) -> Result<Vec<u8>, Box<dyn Error>> {
         // .context("failed reading file")
         ?;
     Ok(data)
-}
-
-mod common {
-    #[allow(unused)]
-    pub const ALPN_QUIC_HTTP: &[&[u8]] = &[b"hq-29"];
 }

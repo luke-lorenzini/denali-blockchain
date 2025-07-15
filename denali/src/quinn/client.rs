@@ -10,6 +10,8 @@ use rustls::pki_types::{CertificateDer,
 use quinn_proto::crypto::rustls::QuicClientConfig;
 use url::Url;
 
+use crate::quinn::ALPN_QUIC_HTTP;
+
 pub async fn start_quinn_client() -> Result<(), Box<dyn Error>>{
     // Luke - start
     rustls::crypto::ring::default_provider().install_default().expect("Failed to install rustls crypto provider");
@@ -49,7 +51,7 @@ pub async fn start_quinn_client() -> Result<(), Box<dyn Error>>{
         .with_root_certificates(roots)
         .with_no_client_auth();
 
-    client_crypto.alpn_protocols = common::ALPN_QUIC_HTTP.iter().map(|&x| x.into()).collect();
+    client_crypto.alpn_protocols = ALPN_QUIC_HTTP.iter().map(|&x| x.into()).collect();
     // if options.keylog {
     //     client_crypto.key_log = Arc::new(rustls::KeyLogFile::new());
     // }
@@ -134,9 +136,4 @@ fn strip_ipv6_brackets(host: &str) -> &str {
 
 fn duration_secs(x: &Duration) -> f32 {
     x.as_secs() as f32 + x.subsec_nanos() as f32 * 1e-9
-}
-
-mod common {
-    #[allow(unused)]
-    pub const ALPN_QUIC_HTTP: &[&[u8]] = &[b"hq-29"];
 }
