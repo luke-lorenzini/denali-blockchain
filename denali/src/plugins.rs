@@ -29,7 +29,7 @@ impl Plugin {
         }
     }
 
-    pub async fn build(path: PathBuf) -> (&'static str, Plugin) {
+    pub fn build(path: PathBuf) -> (&'static str, Plugin) {
         unsafe {
             let lib = libloading::Library::new(path).unwrap();
             let func: libloading::Symbol<Contract> = lib.get(b"create_thing").unwrap();

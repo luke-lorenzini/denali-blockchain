@@ -75,7 +75,7 @@ async fn async_watch<P: AsRef<Path>>(
                     if let EventKind::Modify(ModifyKind::Name(v)) = event.kind {
                         match v {
                             RenameMode::To => {
-                                let p = Plugin::build(path).await;
+                                let p = Plugin::build(path);
                                 let _x = plugin_tx.send((p.0, Some(p.1))).await;
                             }
                             RenameMode::From => {
@@ -103,7 +103,7 @@ async fn search_for_existing_plugins(path: &Path, plugin_tx: Sender<(&str, Optio
             Ok(path) => {
                 println!("found {:?}", path.display());
                 let xxx = path;
-                let p = Plugin::build(xxx).await;
+                let p = Plugin::build(xxx);
                 let _x = plugin_tx.send((p.0, Some(p.1))).await;
             }
             Err(e) => println!("{e:?}"),

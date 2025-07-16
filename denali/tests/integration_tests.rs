@@ -145,11 +145,7 @@ impl Thing for FakeProgram {
         println!("{xxx:?}");
 
         state
-            // .lock()
-            // .await
-            // .unwrap()
             .set_value("fake_program", 0);
-        println!("{state:?}");
 
         Ok((true, vec![]))
     }

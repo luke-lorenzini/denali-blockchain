@@ -5,7 +5,6 @@ use denali::{storage::State, types::Thing};
 use macros::generate_create_thing;
 use semver::Version;
 use serde_json::Result;
-// use serde::Deserialize;
 
 #[generate_create_thing(args())]
 #[derive(Clone)]
