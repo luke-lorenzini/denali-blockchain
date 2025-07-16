@@ -1,6 +1,7 @@
 use borsh::{BorshDeserialize, BorshSerialize};
 use chrono::Utc;
 use hex::encode;
+use log::trace;
 use sha2::{Digest, Sha256};
 use tokio::{
     sync::{
@@ -87,7 +88,7 @@ pub async fn receiver_task(
         // hasher.update(i.metadata);
         let res = hasher.finalize();
         let tx_id: H256 = encode(res).try_into().unwrap();
-        println!("tx hash: {tx_id:?}");
+        trace!("tx hash: {tx_id:?}");
         let ack = ResponseRx {
             status: true,
             tx_id: tx_id.clone(),

@@ -155,7 +155,7 @@ pub async fn start_quinn_server() -> Result<(), Box<dyn Error>>{
             let fut = handle_connection(root.clone(), conn);
             tokio::spawn(async move {
                 if let Err(e) = fut.await {
-                    println!("connection failed: {reason}", reason = e.to_string())
+                    println!("connection failed: {reason}", reason = e)
                 }
             });
         // }
@@ -196,7 +196,7 @@ async fn handle_connection(root: Arc<Path>, conn: quinn::Incoming) -> Result<(),
             tokio::spawn(
                 async move {
                     if let Err(e) = fut.await {
-                        println!("failed: {reason}", reason = e.to_string());
+                        println!("failed: {reason}", reason = e);
                     }
                 }
                 // .instrument(info_span!("request")),

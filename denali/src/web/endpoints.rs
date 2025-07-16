@@ -51,7 +51,8 @@ pub async fn get_tip(State(state): State<WebState>) -> impl IntoResponse {
 
 pub async fn get_chain(State(state): State<WebState>) -> impl IntoResponse {
     let chain = state.transactor.read().await.chain.get_chain();
-    let result = format!("{:?}", chain);
+    // todo output as json
+    let result = format!("{chain:?}");
     (StatusCode::OK, result)
 }
 
@@ -62,10 +63,10 @@ pub async fn get_tx(
     let tx_id = params.block_hash.try_into();
     if tx_id.is_ok() {
         let chain = state.transactor.read().await.chain.get_tx(&tx_id.unwrap());
-        let result = format!("{:?}", chain);
+        let result = format!("{chain:?}");
         return (StatusCode::OK, result);
     }
-    (StatusCode::BAD_REQUEST, "".into())
+    (StatusCode::BAD_REQUEST, String::new())
 }
 
 pub async fn submit(
@@ -91,7 +92,7 @@ pub async fn submit(
             let tx_result = response_rx;
             let (_, tx_result) = join!(ack_result, tx_result);
             let tx_id: String = tx_result.unwrap().tx_id.into();
-            let msg = format!("tx_id:0x{}\n", tx_id);
+            let msg = format!("tx_id:0x{tx_id}\n");
             (StatusCode::OK, msg)
         }
         false => (StatusCode::BAD_REQUEST, "plugin not found".into()),
@@ -137,7 +138,7 @@ pub async fn block_header(
         {
             Some(b) => {
                 // let xxx: String = b.into();
-                let xxx = format!("{:?}", b);
+                let xxx = format!("{b:?}");
                 return (StatusCode::OK, xxx);
             }
             None => return (StatusCode::OK, "doesn't exists".into()),

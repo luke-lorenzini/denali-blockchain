@@ -47,7 +47,6 @@ impl TryFrom<String> for H256 {
     type Error = &'static str;
 
     fn try_from(value: String) -> std::result::Result<Self, Self::Error> {
-        println!("val string: {:?}", value.as_bytes());
         let decoded = decode(value).map_err(|_e| "Failed to decode")?;
         let inner: [u8; 32] = decoded.try_into().map_err(|_e| "Failed to convert")?;
         Ok(Self(inner))
@@ -64,7 +63,6 @@ impl TryFrom<&str> for H256 {
     type Error = &'static str;
 
     fn try_from(value: &str) -> std::result::Result<Self, Self::Error> {
-        println!("val str: {:?}", value.as_bytes());
         let inner: [u8; 32] = decode(value)
             .unwrap()
             .try_into()

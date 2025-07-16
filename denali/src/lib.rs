@@ -49,7 +49,6 @@ impl Transactor {
         &self,
         message: &Message<Box<dyn Thing + Send + Sync>>,
     ) -> Result<(bool, Vec<String>)> {
-        println!("parse");
         if message.program.verify()? {
             let xxx = self.chain.state.clone();
             let res = message.program.run(&message.payload, xxx).await?;
@@ -63,7 +62,6 @@ impl Transactor {
         &self,
         transaction: &Message<Box<dyn Thing + Send + Sync>>,
     ) -> Result<(bool, Vec<String>)> {
-        println!("process_transaction");
 
         self.parse(transaction).await
     }
@@ -74,7 +72,6 @@ impl Transactor {
         transactions_map: Arc<Mutex<HashMap<H256, Transaction>>>,
     ) -> Vec<H256> {
         // fn process_transactions<T: Thing>(&self, transactions: Vec<Message<T>>) -> H256 {
-        println!("process_transactions");
         let mut res = vec![];
         // let mut hasher = Sha256::new();
         for transaction in transactions {
@@ -109,7 +106,6 @@ impl Transactor {
         messages: Vec<Message<Box<dyn Thing + Send + Sync>>>,
     ) -> bool {
         // pub fn create_new_block<T: Thing>(&mut self, messages: Vec<Message<T>>) -> bool {
-        println!("create_new_block");
         let transactions = Arc::new(Mutex::new(HashMap::new()));
         let mut hasher = Sha256::new();
         let txs = self

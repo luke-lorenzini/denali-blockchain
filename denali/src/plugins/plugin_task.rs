@@ -52,7 +52,7 @@ fn async_watcher() -> notify::Result<(RecommendedWatcher, Receiver<notify::Resul
         move |res| {
             futures::executor::block_on(async {
                 tx.send(res).await.unwrap();
-            })
+            });
         },
         Config::default(),
     )?;
@@ -106,7 +106,7 @@ async fn search_for_existing_plugins(path: &Path, plugin_tx: Sender<(&str, Optio
                 let p = Plugin::build(xxx).await;
                 let _x = plugin_tx.send((p.0, Some(p.1))).await;
             }
-            Err(e) => println!("{:?}", e),
+            Err(e) => println!("{e:?}"),
         }
     }
 }

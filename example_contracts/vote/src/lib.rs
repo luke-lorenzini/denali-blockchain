@@ -2,6 +2,7 @@ use std::sync::Arc;
 
 use async_trait::async_trait;
 use denali::{storage::State, types::Thing};
+use log::trace;
 use macros::generate_create_thing;
 use semver::Version;
 use serde::Deserialize;
@@ -25,13 +26,13 @@ impl Thing for Vote {
     }
 
     async fn run(&self, payload: &str, state: Arc<State>) -> Result<(bool, Vec<String>)> {
-        println!("vote run");
+        trace!("vote run");
         let logs = vote_program(payload, state).await?;
         Ok((true, logs))
     }
 
     fn verify(&self) -> Result<bool> {
-        println!("vote verify");
+        trace!("vote verify");
         Ok(true)
     }
 }
@@ -39,7 +40,7 @@ impl Thing for Vote {
 impl Vote {
     fn new(number_of_candidates: u32) -> Self {
         let votes = vec![0; number_of_candidates as usize];
-        println!("VOTE!");
+        println!("Created new vote");
         Self { _votes: votes }
     }
 }
@@ -51,14 +52,13 @@ async fn vote_program(payload: &str, state: Arc<State>) -> Result<Vec<String>> {
     }
 
     let payload: Ballot = serde_json::from_str(payload)?;
-    println!("payload: {payload:?}");
+    trace!("payload: {payload:?}");
 
     let current_count = state
         // .lock()
         // .await
         // .unwrap()
         .get_value(&payload.candidate);
-    println!("{current_count:?}");
     state
         // .lock()
         // .await

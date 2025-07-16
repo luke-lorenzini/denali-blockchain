@@ -1,4 +1,5 @@
 use dashmap::DashMap;
+use log::trace;
 use rocksdb::{DB, Options};
 
 #[derive(Clone, Debug)]
@@ -28,17 +29,10 @@ impl State {
     }
 
     pub fn set_value(&self, key: &str, value: u32) {
-        println!("key: {key:?}");
-
-        if self.0.contains_key(key) {
-            println!("found key");
-            // write_to_db(key, value);
-            let mut val = self.0.get_mut(key).expect("Already checked");
-            *val += 1;
-        } else {
-            println!("didn't found key");
-            self.0.insert(key.into(), value);
-        }
+        trace!("key: {key:?}");
+        // write_to_db(key, value);
+        trace!("before: {:?}", self.0);
+        trace!("after: {:?}", self.0);
     }
 
     pub fn new_key_value() {}
@@ -58,7 +52,7 @@ fn _write_to_db(_key: &str, _value: u32) {
         match db.get(b"my key") {
             Ok(Some(value)) => println!("retrieved value {}", String::from_utf8(value).unwrap()),
             Ok(None) => println!("value not found"),
-            Err(e) => println!("operational problem encountered: {}", e),
+            Err(e) => println!("operational problem encountered: {e}"),
         }
         db.delete(b"my key").unwrap();
     }

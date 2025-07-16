@@ -3,6 +3,7 @@ use std::{collections::HashMap, sync::Arc};
 use borsh::{from_slice, to_vec, BorshDeserialize, BorshSerialize};
 use chrono::Utc;
 use hex::encode;
+use log::trace;
 use sha2::{Digest, Sha256};
 
 use crate::{constants::VERSION, messaging::Meta, storage::State, types::H256};
@@ -152,7 +153,7 @@ impl Chain {
         transactions: HashMap<H256, Transaction>,
     ) -> bool {
         let block = Block::new(self.get_block_hash().to_owned(), merkle_tree_root, transactions);
-        println!("block: {block:?}");
+        trace!("block: {block:?}");
         self.tip = Some(block.block_hash.clone());
         self.blocks.insert(self.tip.clone().unwrap(), block);
         self.count += 1;
