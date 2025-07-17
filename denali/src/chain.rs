@@ -1,6 +1,6 @@
 use std::{collections::HashMap, sync::Arc};
 
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use borsh::{BorshDeserialize, BorshSerialize, from_slice, to_vec};
 use chrono::Utc;
 use hex::encode;
@@ -340,7 +340,9 @@ mod test {
         let mut client_chain = Chain::new(true);
         let encoded_block = host_chain.transmit_blocks(None).unwrap();
         assert!(encoded_block.is_some());
-        let res = client_chain.add_received_blocks(encoded_block.unwrap()).unwrap();
+        let res = client_chain
+            .add_received_blocks(encoded_block.unwrap())
+            .unwrap();
         assert!(res);
         // Genesis plus new blocks.
         assert_eq!(client_chain.count, 4);

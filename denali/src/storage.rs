@@ -43,7 +43,7 @@ impl State {
     pub fn new_key_value() {}
 }
 
-fn _write_to_db(_key: &str, _value: u32) -> Result<()>{
+fn _write_to_db(_key: &str, _value: u32) -> Result<()> {
     // Start: RocksDB
     // NB: db is automatically closed at end of lifetime
     let tempdir = tempfile::Builder::new()

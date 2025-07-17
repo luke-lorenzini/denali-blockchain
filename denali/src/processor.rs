@@ -68,17 +68,14 @@ impl Processor {
             // 'tx' that gets written into the tx log should be based on tx details. This needs to be determined before it's processed, deterministically.
             // let tx = self.process_transaction(&transaction).await.unwrap();
             let tx = self.parse(&transaction).await?;
-            transactions_map
-                .lock()
-                .await
-                .insert(
-                    transaction.tx_id.clone(),
-                    Transaction {
-                        tx: transaction.payload,
-                        _metadata: transaction.metadata,
-                        _logs: tx.1,
-                    },
-                );
+            transactions_map.lock().await.insert(
+                transaction.tx_id.clone(),
+                Transaction {
+                    tx: transaction.payload,
+                    _metadata: transaction.metadata,
+                    _logs: tx.1,
+                },
+            );
             res.push(transaction.tx_id);
         }
         // let res = hasher.finalize();

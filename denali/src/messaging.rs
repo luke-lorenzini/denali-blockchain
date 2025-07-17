@@ -65,8 +65,7 @@ pub async fn message_generator_task(tx: Sender<(String, String, Meta)>) -> Resul
             program = "vote";
         }
 
-        tx.send((program.into(), payload.into(), Meta {}))
-            .await?;
+        tx.send((program.into(), payload.into(), Meta {})).await?;
     }
 }
 
