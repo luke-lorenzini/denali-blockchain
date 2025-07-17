@@ -20,6 +20,7 @@ pub async fn web_task(
     tx: Sender<ResponseTx>,
     transactor: Arc<RwLock<Transactor>>,
     contract_map: Arc<RwLock<HashMap<String, Plugin>>>,
+    replica: bool,
 ) {
     let web_state = WebState {
         transactor,
@@ -38,6 +39,10 @@ pub async fn web_task(
         .route("/get-tx", get(get_tx))
         .with_state(web_state);
 
-    let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await.unwrap();
+    let listener = if !replica {
+        tokio::net::TcpListener::bind("0.0.0.0:3000").await.unwrap()
+    } else {
+        tokio::net::TcpListener::bind("0.0.0.0:3001").await.unwrap()
+    };
     axum::serve(listener, app).await.unwrap();
 }

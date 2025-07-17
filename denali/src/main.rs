@@ -54,10 +54,14 @@ async fn main() {
         transactor.clone(),
         rx_msg_queue,
     ));
-    let web_task = spawn(web_task(tx, transactor.clone(), contract_map.clone()));
+    let web_task = spawn(web_task(
+        tx,
+        transactor.clone(),
+        contract_map.clone(),
+        replica,
+    ));
 
     let _res = join!(
-        // message_generator_task,
         processor_task,
         receiver_task,
         plugin_scanner_task,
