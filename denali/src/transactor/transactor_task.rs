@@ -1,0 +1,39 @@
+use std::{collections::HashMap, sync::Arc};
+
+use tokio::sync::{RwLock, mpsc::Receiver};
+
+use crate::{
+     messaging::Meta, plugins::Plugin, transactor::{Message, Transactor}, types::{H256}
+};
+
+#[tracing::instrument]
+pub async fn transactor_task(
+    contract_map: Arc<RwLock<HashMap<String, Plugin>>>,
+    transactor: Arc<RwLock<Transactor>>,
+    mut rx_msg_queue: Receiver<Vec<(H256, String, String, Meta)>>,
+) {
+    // receive a batch of messages
+    while let Some(messages) = rx_msg_queue.recv().await {
+        let mut transactions = Vec::new();
+        // this loop can be parallelized, maybe
+        for message in messages {
+            let program = contract_map.read().await;
+            // println!("{:?}", message.0);
+            let program = program.get(&message.1).unwrap().thing.clone_box();
+
+            let transaction = Message {
+                program,
+                payload: message.2,
+                tx_id: message.0,
+                metadata: message.3,
+            };
+            transactions.push(transaction);
+        }
+        let _res = transactor
+            .clone()
+            .write()
+            .await
+            .create_new_block(transactions)
+            .await;
+    }
+}

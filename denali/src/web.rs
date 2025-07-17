@@ -2,7 +2,7 @@ use std::{collections::HashMap, sync::Arc};
 
 use tokio::sync::{RwLock, mpsc::Sender};
 
-use crate::{Plugin, Transactor, messaging::ResponseTx};
+use crate::{messaging::ResponseTx, transactor::Transactor, Plugin};
 
 pub mod endpoints;
 pub mod web_task;

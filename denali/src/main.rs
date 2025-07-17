@@ -2,13 +2,8 @@ use std::{collections::HashMap, sync::Arc};
 
 use clap::Parser;
 use denali::{
-    Transactor,
-    constants::PATH,
-    messaging::receiver_task,
-    plugins::plugin_task::{plugin_builder, plugin_scanner_task},
-    processor_task,
-    quinn::{client::start_quinn_client, server::start_quinn_server},
-    web::web_task::web_task,
+    
+    constants::PATH, messaging::receiver_task, plugins::plugin_task::{plugin_builder, plugin_scanner_task}, quinn::{client::start_quinn_client, server::start_quinn_server}, transactor::{transactor_task::{transactor_task}, Transactor}, web::web_task::web_task
 };
 use tokio::{
     join, spawn,
@@ -49,9 +44,8 @@ async fn main() {
 
     let plugin_scanner_task = spawn(plugin_scanner_task(PATH.as_ref(), plugin_tx));
     let plugin_builder_task = spawn(plugin_builder(contract_map.clone(), plugin_rx));
-    // let message_generator_task = spawn(message_generator_task(tx.clone()));
     let receiver_task = spawn(receiver_task(tx_msg_queue, rx));
-    let processor_task = spawn(processor_task(
+    let processor_task = spawn(transactor_task(
         contract_map.clone(),
         transactor.clone(),
         rx_msg_queue,
