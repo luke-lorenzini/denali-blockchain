@@ -2,8 +2,10 @@ use std::sync::Arc;
 
 use async_trait::async_trait;
 use denali::{
-    
-    messaging::Meta, storage::State, transactor::{Message, Transactor}, types::{Thing, H256}
+    messaging::Meta,
+    storage::State,
+    transactor::{Message, Transactor},
+    types::{H256, Thing},
 };
 use semver::Version;
 use serde::Deserialize;

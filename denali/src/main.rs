@@ -2,8 +2,12 @@ use std::{collections::HashMap, sync::Arc};
 
 use clap::Parser;
 use denali::{
-    
-    constants::PATH, messaging::receiver_task, plugins::plugin_task::{plugin_builder, plugin_scanner_task}, quinn::{client::start_quinn_client, server::start_quinn_server}, transactor::{transactor_task::{transactor_task}, Transactor}, web::web_task::web_task
+    constants::PATH,
+    messaging::receiver_task,
+    plugins::plugin_task::{plugin_builder, plugin_scanner_task},
+    quinn::{client::start_quinn_client, server::start_quinn_server},
+    transactor::{Transactor, transactor_task::transactor_task},
+    web::web_task::web_task,
 };
 use tokio::{
     join, spawn,

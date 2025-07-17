@@ -3,7 +3,10 @@ use std::{collections::HashMap, sync::Arc};
 use tokio::sync::{RwLock, mpsc::Receiver};
 
 use crate::{
-     messaging::Meta, plugins::Plugin, transactor::{Message, Transactor}, types::{H256}
+    messaging::Meta,
+    plugins::Plugin,
+    transactor::{Message, Transactor},
+    types::H256,
 };
 
 #[tracing::instrument]

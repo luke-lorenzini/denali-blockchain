@@ -1,7 +1,4 @@
-use crate::{
-    plugins::Plugin,
-    types::{Thing},
-};
+use crate::{plugins::Plugin, types::Thing};
 
 pub mod chain;
 pub mod constants;

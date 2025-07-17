@@ -9,8 +9,10 @@ use axum::{
 use tokio::sync::{RwLock, mpsc::Sender};
 
 use crate::{
-    
-    messaging::ResponseTx, plugins::Plugin, transactor::Transactor, web::{endpoints::*, WebState}
+    messaging::ResponseTx,
+    plugins::Plugin,
+    transactor::Transactor,
+    web::{WebState, endpoints::*},
 };
 
 #[tracing::instrument]
