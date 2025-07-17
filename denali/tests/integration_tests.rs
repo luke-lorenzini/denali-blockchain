@@ -144,8 +144,7 @@ impl Thing for FakeProgram {
         let xxx: Payload = serde_json::from_slice(payload.as_bytes()).unwrap();
         println!("{xxx:?}");
 
-        state
-            .set_value("fake_program", 0);
+        state.set_value("fake_program", &[0]);
 
         Ok((true, vec![]))
     }

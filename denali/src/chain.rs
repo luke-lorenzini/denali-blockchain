@@ -1,6 +1,6 @@
 use std::{collections::HashMap, sync::Arc};
 
-use borsh::{from_slice, to_vec, BorshDeserialize, BorshSerialize};
+use borsh::{BorshDeserialize, BorshSerialize, from_slice, to_vec};
 use chrono::Utc;
 use hex::encode;
 use log::trace;
@@ -8,13 +8,11 @@ use sha2::{Digest, Sha256};
 
 use crate::{constants::VERSION, messaging::Meta, storage::State, types::H256};
 
-#[derive(
-    BorshDeserialize, BorshSerialize, 
-    Clone, Debug, PartialEq)]
+#[derive(BorshDeserialize, BorshSerialize, Clone, Debug, PartialEq)]
 pub struct Header {
     version: u32,
-    previous_block_hash: String,
-    _merkle_tree_root: String,
+    previous_block_hash: H256,
+    merkle_tree_root: H256,
     timestamp: i64,
     difficulty: u32,
     nonce: u32,
@@ -24,8 +22,8 @@ impl Header {
     fn new(previous_block_hash: H256, merkle_tree_root: H256) -> Self {
         Self {
             version: VERSION,
-            previous_block_hash: previous_block_hash.into(),
-            _merkle_tree_root: merkle_tree_root.into(),
+            previous_block_hash,
+            merkle_tree_root,
             timestamp: Utc::now().timestamp_micros(),
             difficulty: u32::default(),
             nonce: u32::default(),
@@ -35,8 +33,8 @@ impl Header {
     fn genesis() -> Self {
         Self {
             version: VERSION,
-            previous_block_hash: H256::zero().into(),
-            _merkle_tree_root: H256::dummy().into(),
+            previous_block_hash: H256::zero(),
+            merkle_tree_root: H256::dummy(),
             timestamp: Utc::now().timestamp_micros(),
             difficulty: u32::default(),
             nonce: u32::default(),
@@ -64,18 +62,14 @@ impl Header {
     }
 }
 
-#[derive(
-    BorshDeserialize, BorshSerialize, 
-    Clone, Debug, PartialEq)]
+#[derive(BorshDeserialize, BorshSerialize, Clone, Debug, PartialEq)]
 pub struct Transaction {
     pub tx: String,
     pub _metadata: Meta,
     pub _logs: Vec<String>,
 }
 
-#[derive(
-    BorshDeserialize, BorshSerialize, 
-    Clone, Debug, PartialEq)]
+#[derive(BorshDeserialize, BorshSerialize, Clone, Debug, PartialEq)]
 struct Block {
     block_hash: H256,
     header: Header,
@@ -152,20 +146,26 @@ impl Chain {
         merkle_tree_root: H256,
         transactions: HashMap<H256, Transaction>,
     ) -> bool {
-        let block = Block::new(self.get_block_hash().to_owned(), merkle_tree_root, transactions);
-        trace!("block: {block:?}");
+        let block = Block::new(
+            self.get_block_hash().clone(),
+            merkle_tree_root,
+            transactions,
+        );
+        trace!("add_next_block block: {block:?}");
         self.tip = Some(block.block_hash.clone());
         self.blocks.insert(self.tip.clone().unwrap(), block);
         self.count += 1;
         true
     }
 
-    pub fn _add_received_block(&mut self, encoded_block: &[u8]) -> bool {
-        let block = from_slice::<Block>(encoded_block).unwrap();
-        println!("block: {block:?}");
-        self.tip = Some(block.block_hash.clone());
-        self.blocks.insert(self.tip.clone().unwrap(), block);
-        self.count += 1;
+    pub fn _add_received_blocks(&mut self, encoded_blocks: Vec<Vec<u8>>) -> bool {
+        for encoded_block in encoded_blocks {
+            let block = from_slice::<Block>(&encoded_block).unwrap();
+            trace!("add_received_blocks block: {block:?}");
+            self.tip = Some(block.block_hash.clone());
+            self.blocks.insert(self.tip.clone().unwrap(), block);
+            self.count += 1;
+        }
         true
     }
 
@@ -188,9 +188,9 @@ impl Chain {
         self.tip.clone().unwrap()
     }
 
-    pub fn get_chain(&self) -> Vec<String> {
+    pub fn get_chain(&self) -> Vec<H256> {
         let mut current = self.tip.clone().unwrap();
-        let mut res = vec![String::from(current.clone())];
+        let mut res = vec![current.clone()];
         println!("tip: {:?}", String::from(self.tip.clone().unwrap()));
 
         for _ in 0..self.count - 1 {
@@ -198,30 +198,72 @@ impl Chain {
             if let Some(p) = x {
                 let previous = p.header.previous_block_hash.clone();
                 res.push(previous.clone());
-                current = previous.try_into().unwrap();
+                current = previous;
             }
         }
         res.into_iter().rev().collect()
     }
 
     pub fn get_tx(&self, tx_id: &H256) -> String {
-        println!("Looking... {tx_id:?}");
+        println!("Searching... {tx_id:?}");
         for i in self.blocks.iter() {
             if let Some(v) = i.1.transactions.get(tx_id) {
                 return v.tx.clone();
             }
         }
 
-        "".into()
+        String::new()
     }
 
-    pub fn _transmit_block(&self, block_hash: &H256) -> Vec<u8> {
-        let x: &Block = self.blocks.get(block_hash).unwrap();
-        let encoded_block = to_vec(x).unwrap();
-        let decoded_block = from_slice::<Block>(&encoded_block).unwrap();
-        assert_eq!(&decoded_block, x);
-        println!("encoded_block: {encoded_block:?}");
-        encoded_block
+    pub fn _get_chain_hash(&self) -> H256 {
+        trace!("blocks {:?}", self.blocks);
+        let res = to_vec(&self.blocks).unwrap();
+        trace!("{res:?}");
+        let mut hasher = Sha256::new();
+        hasher.update(res);
+        let res = hasher.finalize();
+        let result = encode(res).try_into().unwrap();
+        trace!("{result:?}");
+        result
+    }
+
+    pub fn transmit_blocks(&self, block_hash: Option<&H256>) -> Option<Vec<Vec<u8>>> {
+        if block_hash.is_some() && block_hash.unwrap() == self.tip.as_ref().unwrap() {
+            // client is already at the latest, maybe return Ok<None>
+            return None;
+        } else if block_hash.is_some() && !self.blocks.contains_key(block_hash.unwrap()) {
+            // hash cannot be found, consider returning result<error> here
+            return None;
+        }
+        let mut result = Vec::with_capacity(self.count as usize);
+        let mut block = self
+            .blocks
+            .get(self.tip.as_ref().unwrap())
+            .expect("Already checked");
+        let mut encoded_block = to_vec(block).unwrap();
+        result.push(encoded_block);
+
+        match block_hash {
+            Some(block_hash) => {
+                while block.header.previous_block_hash != *block_hash {
+                    block = self.blocks.get(&block.header.previous_block_hash).unwrap();
+                    encoded_block = to_vec(block).unwrap();
+                    result.push(encoded_block);
+                }
+            }
+            None => {
+                while block.header.previous_block_hash != H256::zero() {
+                    block = self.blocks.get(&block.header.previous_block_hash).unwrap();
+                    encoded_block = to_vec(block).unwrap();
+                    result.push(encoded_block);
+                }
+                // Add the genesis block.
+                block = self.blocks.get(&H256::zero()).unwrap();
+                encoded_block = to_vec(block).unwrap();
+                result.push(encoded_block);
+            }
+        }
+        Some(result.into_iter().rev().collect())
     }
 }
 
@@ -230,23 +272,92 @@ mod test {
     use super::*;
 
     #[test]
-    fn test_transmit_block() {
+    fn test_transmit_block_at_same_point() {
         let block_hash = H256::zero();
         let chain = Chain::new(false);
-        let res = chain._transmit_block(&block_hash);
-        println!("res: {res:?}");
+        let res = chain.transmit_blocks(Some(&block_hash));
+        assert!(res.is_none())
     }
 
     #[test]
-    fn test_add_received_block() {
-        let block_hash = H256::zero();
-        let host_chain = Chain::new(false);
+    fn test_transmit_block_non_existent() {
+        let block_hash =
+            H256::try_from("66687aadf862bd776c8fc18b8e9f8e20089714856ee233b3902a591d0d5f2925")
+                .unwrap();
+        let chain = Chain::new(false);
+        let res = chain.transmit_blocks(Some(&block_hash));
+        assert!(res.is_none())
+    }
+
+    #[test]
+    fn test_transmit_block_has_genesis() {
+        let mut chain = Chain::new(false);
+        let merkle_tree_root =
+            H256::try_from("66687aadf862bd776c8fc18b8e9f8e20089714856ee233b3902a591d0d5f2925")
+                .unwrap();
+        chain.add_next_block(merkle_tree_root, HashMap::new());
+        let merkle_tree_root =
+            H256::try_from("45687aadf862bd776c8fc18b8e9f8e20099714856ff233b3902a591d0d5f2925")
+                .unwrap();
+        chain.add_next_block(merkle_tree_root, HashMap::new());
+        let res = chain.transmit_blocks(Some(&H256::zero()));
+        assert!(res.is_some());
+        assert_eq!(res.unwrap().len(), 2);
+    }
+
+    #[test]
+    fn test_transmit_block_from_scratch() {
+        let mut chain = Chain::new(false);
+        let merkle_tree_root =
+            H256::try_from("66687aadf862bd776c8fc18b8e9f8e20089714856ee233b3902a591d0d5f2925")
+                .unwrap();
+        chain.add_next_block(merkle_tree_root, HashMap::new());
+        let merkle_tree_root =
+            H256::try_from("45687aadf862bd776c8fc18b8e9f8e20099714856ff233b3902a591d0d5f2925")
+                .unwrap();
+        chain.add_next_block(merkle_tree_root, HashMap::new());
+        let res = chain.transmit_blocks(None);
+        assert!(res.is_some());
+        assert_eq!(res.unwrap().len(), 3);
+    }
+
+    #[test]
+    fn test_add_received_blocks() {
+        // Create a host chain with two additional blocks.
+        let mut host_chain = Chain::new(false);
+        let merkle_tree_root =
+            H256::try_from("66687aadf862bd776c8fc18b8e9f8e20089714856ee233b3902a591d0d5f2925")
+                .unwrap();
+        host_chain.add_next_block(merkle_tree_root, HashMap::new());
+        let merkle_tree_root =
+            H256::try_from("45687aadf862bd776c8fc18b8e9f8e20099714856ff233b3902a591d0d5f2925")
+                .unwrap();
+        host_chain.add_next_block(merkle_tree_root, HashMap::new());
+        let merkle_tree_root =
+            H256::try_from("34687aadf862bd776c8fc18b8e9f8e20088714856ff233b2802a591d0d5f2925")
+                .unwrap();
+        host_chain.add_next_block(merkle_tree_root, HashMap::new());
+
+        // Create a client chain.
         let mut client_chain = Chain::new(true);
-        let encoded_block = host_chain._transmit_block(&block_hash);
-        let res = client_chain._add_received_block(&encoded_block);
+        let encoded_block = host_chain.transmit_blocks(None);
+        assert!(encoded_block.is_some());
+        let res = client_chain._add_received_blocks(encoded_block.unwrap());
         assert!(res);
-        let count = client_chain.count;
-        assert_eq!(count, 1);
+        // Genesis plus new blocks.
+        assert_eq!(client_chain.count, 4);
+
+        let host_tip = host_chain.get_tip();
+        let client_tip = client_chain.get_tip();
+        assert_eq!(host_tip, client_tip);
+
+        let host_tip_hash = host_chain.get_block_hash();
+        let client_tip_hash = client_chain.get_block_hash();
+        assert_eq!(host_tip_hash, client_tip_hash);
+
+        let host_hash = host_chain._get_chain_hash();
+        let client_hash = client_chain._get_chain_hash();
+        assert_eq!(host_hash, client_hash)
     }
 
     #[test]
@@ -258,14 +369,8 @@ mod test {
     #[test]
     fn test_new_genesis_header() {
         let header = Header::genesis();
-        assert_eq!(
-            header.previous_block_hash,
-            String::try_from(H256::zero()).unwrap()
-        );
-        assert_eq!(
-            header._merkle_tree_root,
-            String::try_from(H256::zero()).unwrap()
-        );
+        assert_eq!(header.previous_block_hash, H256::zero());
+        assert_eq!(header.merkle_tree_root, H256::zero());
     }
 
     #[test]
@@ -284,11 +389,23 @@ mod test {
 
     #[test]
     fn test_new_chain_block() {
-        // let res = Block::new(H256::default(), H256::default());
-        // assert_eq!(res.header.version, 0)
+        let res = Block::new(H256::zero(), H256::zero(), HashMap::default());
+        assert_eq!(res.header.version, 0);
+        assert_eq!(res.header.previous_block_hash, H256::zero())
     }
 
-    #[ignore = "mock sys time"]
+    #[test]
+    fn test_get_chain_hash() {
+        let server_chain = Chain::new(false);
+        let server_hash = server_chain._get_chain_hash();
+        let mut client_chain = Chain::new(true);
+        let encoded_blocks = server_chain.transmit_blocks(None).unwrap();
+        let _ = client_chain._add_received_blocks(encoded_blocks);
+        let client_hash = client_chain._get_chain_hash();
+        assert_eq!(server_hash, client_hash)
+    }
+
+    #[ignore = "todo: mock sys time"]
     #[test]
     fn test_calc_hash() {
         let header = Header::new(H256::zero(), H256::zero());
@@ -302,10 +419,11 @@ mod test {
 
     #[test]
     fn test_add_next_block() {
-        // let mut chain = Chain::new();
-        // let res = chain.add_next_block(H256::default());
-        // let expected = true;
-        // assert_eq!(res, expected)
+        let mut chain = Chain::new(false);
+        let res = chain.add_next_block(H256::zero(), HashMap::new());
+        let expected = true;
+        assert_eq!(res, expected);
+        assert_eq!(chain.count, 2)
     }
 
     #[ignore = "mock sys time"]

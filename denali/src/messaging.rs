@@ -13,9 +13,7 @@ use tokio::{
 
 use crate::{constants::BATCH_SIZE, types::H256};
 
-#[derive(
-    BorshDeserialize, BorshSerialize, 
-    Clone, Debug, PartialEq)]
+#[derive(BorshDeserialize, BorshSerialize, Clone, Debug, PartialEq)]
 pub struct Meta {}
 
 pub struct ResponseTx {

@@ -62,7 +62,6 @@ impl Transactor {
         &self,
         transaction: &Message<Box<dyn Thing + Send + Sync>>,
     ) -> Result<(bool, Vec<String>)> {
-
         self.parse(transaction).await
     }
 
