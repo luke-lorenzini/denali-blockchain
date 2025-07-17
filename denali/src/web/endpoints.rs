@@ -56,6 +56,12 @@ pub async fn get_chain(State(state): State<WebState>) -> impl IntoResponse {
     (StatusCode::OK, result)
 }
 
+pub async fn chain_hash(State(state): State<WebState>) -> impl IntoResponse {
+    let chain = state.processor.read().await.chain.get_chain_hash();
+    let result = format!("{:?}", chain);
+    (StatusCode::OK, result)
+}
+
 pub async fn get_tx(
     State(state): State<WebState>,
     Query(params): Query<QueryParams>,

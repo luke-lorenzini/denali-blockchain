@@ -37,6 +37,7 @@ pub async fn web_task(
         .route("/get-block-transactions", get(block_transactions))
         .route("/get-chain", get(get_chain))
         .route("/get-tx", get(get_tx))
+        .route("/get/chain-hash", get(chain_hash))
         .with_state(web_state);
 
     let listener = if !replica {

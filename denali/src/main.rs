@@ -37,12 +37,14 @@ async fn main() {
     let (plugin_tx, plugin_rx) = channel(channel_size);
 
     let handle = if !replica {
-        spawn(async {
-            let _res = start_quinn_server().await;
+        let processor = processor.clone();
+        spawn(async move {
+            let _res = start_quinn_server(processor).await;
         })
     } else {
-        spawn(async {
-            let _res = start_quinn_client().await;
+        let processor = processor.clone();
+        spawn(async move {
+            let _res = start_quinn_client(processor).await;
         })
     };
 

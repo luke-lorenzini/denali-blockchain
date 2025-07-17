@@ -1,17 +1,31 @@
-use std::{error::Error, fs, io, net::{IpAddr, Ipv4Addr, SocketAddr}, path::{self, Path, 
-    PathBuf
-}, sync::Arc};
+use std::{
+    error::Error,
+    fs, io,
+    net::{IpAddr, Ipv4Addr, SocketAddr},
+    path::{self, Path, PathBuf},
+    sync::Arc,
+};
 
 use directories_next::ProjectDirs;
-use log::{error, info};
+use log::{
+    // error,
+    info,
+};
 use quinn::{Endpoint, ServerConfig};
 // use rustls::KeyLogFile;
-use rustls::pki_types::{CertificateDer, PrivateKeyDer, 
+use quinn_proto::crypto::rustls::QuicServerConfig;
+use rustls::pki_types::{
+    CertificateDer,
+    PrivateKeyDer,
     // PrivatePkcs8KeyDer
 };
-use quinn_proto::crypto::rustls::QuicServerConfig;
+use tokio::sync::RwLock;
 
-use crate::quinn::ALPN_QUIC_HTTP;
+use crate::{
+    processor::Processor,
+    // types::H256,
+    quinn::ALPN_QUIC_HTTP,
+};
 
 // #[derive(Parser, Debug)]
 // #[clap(name = "server")]
@@ -41,14 +55,16 @@ use crate::quinn::ALPN_QUIC_HTTP;
 //     connection_limit: Option<usize>,
 // }
 
-pub async fn start_quinn_server() -> Result<(), Box<dyn Error>>{
+pub async fn start_quinn_server(processor: Arc<RwLock<Processor>>) -> Result<(), Box<dyn Error>> {
     // let options: Opt;
 
     // Luke - start
-    rustls::crypto::ring::default_provider().install_default().expect("Failed to install rustls crypto provider");
+    rustls::crypto::ring::default_provider()
+        .install_default()
+        .expect("Failed to install rustls crypto provider");
     // Luke - end
 
-    let (certs, key) = 
+    let (certs, key) =
     // if let (Some(key_path), Some(cert_path)) = (&options.key, &options.cert) {
     //     let key = fs::read(key_path).context("failed to read private key")?;
     //     let key = if key_path.extension().is_some_and(|x| x == "der") {
@@ -126,7 +142,7 @@ pub async fn start_quinn_server() -> Result<(), Box<dyn Error>>{
     let root = Arc::<Path>::from(PATH.as_ref());
     // Luke - End
     if !root.exists() {
-    //     bail!("root path does not exist");
+        //     bail!("root path does not exist");
         todo!()
     }
 
@@ -151,20 +167,24 @@ pub async fn start_quinn_server() -> Result<(), Box<dyn Error>>{
         //     info!("requiring connection to validate its address");
         //     conn.retry().unwrap();
         // } else {
-            println!("accepting connection");
-            let fut = handle_connection(root.clone(), conn);
-            tokio::spawn(async move {
-                if let Err(e) = fut.await {
-                    println!("connection failed: {reason}", reason = e)
-                }
-            });
+        println!("accepting connection");
+        let fut = handle_connection(root.clone(), conn, processor.clone());
+        tokio::spawn(async move {
+            if let Err(e) = fut.await {
+                println!("connection failed: {reason}", reason = e)
+            }
+        });
         // }
     }
 
     Ok(())
 }
 
-async fn handle_connection(root: Arc<Path>, conn: quinn::Incoming) -> Result<(), Box<dyn Error>> {
+async fn handle_connection(
+    root: Arc<Path>,
+    conn: quinn::Incoming,
+    processor: Arc<RwLock<Processor>>,
+) -> Result<(), Box<dyn Error>> {
     let connection = conn.await?;
     // let span = info_span!(
     //     "connection",
@@ -192,14 +212,13 @@ async fn handle_connection(root: Arc<Path>, conn: quinn::Incoming) -> Result<(),
                 }
                 Ok(s) => s,
             };
-            let fut = handle_request(root.clone(), stream);
+            let fut = handle_request(root.clone(), stream, processor.clone());
             tokio::spawn(
                 async move {
                     if let Err(e) = fut.await {
                         println!("failed: {reason}", reason = e);
                     }
-                }
-                // .instrument(info_span!("request")),
+                }, // .instrument(info_span!("request")),
             );
         }
     }
@@ -211,6 +230,7 @@ async fn handle_connection(root: Arc<Path>, conn: quinn::Incoming) -> Result<(),
 async fn handle_request(
     root: Arc<Path>,
     (mut send, mut recv): (quinn::SendStream, quinn::RecvStream),
+    processor: Arc<RwLock<Processor>>,
 ) -> Result<(), Box<dyn Error>> {
     let req = recv
         .read_to_end(64 * 1024)
@@ -224,35 +244,46 @@ async fn handle_request(
     // }
     // info!(content = %escaped);
     // Execute the request
-    let resp = process_get(&root, &req).unwrap_or_else(|e| {
-        error!("failed: {}", e);
-        format!("failed to process request: {e}\n").into_bytes()
-    });
-    // Write the response
-    send.write_all(&resp)
+    let resp = process_get(&root, &req, processor)
         .await
-        // .map_err(|e| anyhow!("failed to send response: {}", e))
-        ?;
-    // Gracefully terminate the stream
-    send.finish().unwrap();
+        // .unwrap_or_else(|e| {
+        //     error!("failed: {}", e);
+        //     format!("failed to process request: {e}\n").into_bytes()
+        // })
+        .unwrap();
+
+    if let Some(resp) = resp {
+        // for r in resp {
+        // Write the response
+        send.write_all(&resp)
+                .await
+                // .map_err(|e| anyhow!("failed to send response: {}", e))
+                ?;
+        // }
+        // Gracefully terminate the stream
+        send.finish().unwrap();
+    }
     info!("complete");
     Ok(())
 }
 
-fn process_get(root: &Path, x: &[u8]) -> Result<Vec<u8>, Box<dyn Error>> {
+async fn process_get(
+    root: &Path,
+    x: &[u8],
+    processor: Arc<RwLock<Processor>>,
+) -> Result<Option<Vec<u8>>, Box<dyn Error>> {
     if x.len() < 4 || &x[0..4] != b"GET " {
-//         bail!("missing GET");
+        //         bail!("missing GET");
     }
     if x[4..].len() < 2 || &x[x.len() - 2..] != b"\r\n" {
-//         bail!("missing \\r\\n");
+        //         bail!("missing \\r\\n");
     }
     let x = &x[4..x.len() - 2];
     let end = x.iter().position(|&c| c == b' ').unwrap_or(x.len());
     let path = str::from_utf8(&x[..end])
         // .unwrap()
         // .context("path is malformed UTF-8")?
-        ?
-        ;
+        ?;
     let path = Path::new(&path);
     let mut real_path = PathBuf::from(root);
     let mut components = path.components();
@@ -273,8 +304,9 @@ fn process_get(root: &Path, x: &[u8]) -> Result<Vec<u8>, Box<dyn Error>> {
             }
         }
     }
-    let data = fs::read(&real_path)
-        // .context("failed reading file")
-        ?;
+    // let data = fs::read(&real_path)
+    // .context("failed reading file")
+    // ?;
+    let data = processor.read().await.chain.transmit_blocks(None);
     Ok(data)
 }

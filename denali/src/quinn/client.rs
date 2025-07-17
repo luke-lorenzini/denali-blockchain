@@ -1,20 +1,32 @@
-use std::{error::Error, fs, io::{self, 
-    // Write
-}, net::{IpAddr, Ipv4Addr, SocketAddr, ToSocketAddrs}, sync::Arc, time::{Duration, Instant}};
+use std::{
+    error::Error,
+    fs,
+    io::{
+        self,
+        // Write
+    },
+    net::{IpAddr, Ipv4Addr, SocketAddr, ToSocketAddrs},
+    sync::Arc,
+    time::{Duration, Instant},
+};
 
 use log::{error, info};
-use rustls::pki_types::{CertificateDer, 
-    // PrivateKeyDer, 
+use quinn_proto::crypto::rustls::QuicClientConfig;
+use rustls::pki_types::{
+    CertificateDer,
+    // PrivateKeyDer,
     // PrivatePkcs8KeyDer
 };
-use quinn_proto::crypto::rustls::QuicClientConfig;
+use tokio::sync::RwLock;
 use url::Url;
 
-use crate::quinn::ALPN_QUIC_HTTP;
+use crate::{processor::Processor, quinn::ALPN_QUIC_HTTP};
 
-pub async fn start_quinn_client() -> Result<(), Box<dyn Error>>{
+pub async fn start_quinn_client(processor: Arc<RwLock<Processor>>) -> Result<(), Box<dyn Error>> {
     // Luke - start
-    rustls::crypto::ring::default_provider().install_default().expect("Failed to install rustls crypto provider");
+    rustls::crypto::ring::default_provider()
+        .install_default()
+        .expect("Failed to install rustls crypto provider");
     // Luke - end
 
     // luke - start
@@ -32,7 +44,7 @@ pub async fn start_quinn_client() -> Result<(), Box<dyn Error>>{
     let mut roots = rustls::RootCertStore::empty();
     // if let Some(ca_path) = options.ca {
     //     roots.add(CertificateDer::from(fs::read(ca_path)?))?;
-    // } else 
+    // } else
     {
         let dirs = directories_next::ProjectDirs::from("org", "quinn", "quinn-examples").unwrap();
         match fs::read(dirs.data_local_dir().join("cert.der")) {
@@ -107,15 +119,17 @@ pub async fn start_quinn_client() -> Result<(), Box<dyn Error>>{
         .await
         // .map_err(|e| anyhow!("failed to read response: {}", e))
         ?;
-    let duration = response_start.elapsed();
-    eprintln!(
-        "response received in {:?} - {} KiB/s",
-        duration,
-        resp.len() as f32 / (duration_secs(&duration) * 1024.0)
-    );
+    processor.write().await.chain.add_received_blocks(resp);
+    // let duration = response_start.elapsed();
+    // eprintln!(
+    //     "response received in {:?} - {} KiB/s",
+    //     duration,
+    //     resp.len() as f32 / (duration_secs(&duration) * 1024.0)
+    // );
     // io::stdout().write_all(&resp).unwrap();
     // io::stdout().flush().unwrap();
-    println!("{:?}", resp);
+    // println!("{:?}", resp);
+    println!("Complete");
     conn.close(0u32.into(), b"done");
 
     // Give the server a fair chance to receive the close packet
@@ -134,6 +148,6 @@ fn strip_ipv6_brackets(host: &str) -> &str {
     }
 }
 
-fn duration_secs(x: &Duration) -> f32 {
+fn _duration_secs(x: &Duration) -> f32 {
     x.as_secs() as f32 + x.subsec_nanos() as f32 * 1e-9
 }
