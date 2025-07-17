@@ -8,6 +8,7 @@ denali = { path = "../../denali" }
 macros = { path = "../../macros" }
 
 async-trait.workspace = true
+borsh.workspace = true
 log.workspace = true
 rust_decimal.workspace = true
 semver.workspace = true

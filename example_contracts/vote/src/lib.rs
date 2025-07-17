@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
 use async_trait::async_trait;
+use borsh::{BorshDeserialize, BorshSerialize, from_slice, to_vec};
 use denali::{storage::State, types::Thing};
 use log::trace;
 use macros::generate_create_thing;
@@ -45,6 +46,15 @@ impl Vote {
     }
 }
 
+#[derive(BorshDeserialize, BorshSerialize, Debug)]
+struct ContractData {
+    candidates: Vec<u32>,
+}
+
+struct _ContractUsers {
+    users: Vec<String>,
+}
+
 async fn vote_program(payload: &str, state: Arc<State>) -> Result<Vec<String>> {
     #[derive(Debug, Deserialize)]
     struct Ballot {
@@ -54,16 +64,27 @@ async fn vote_program(payload: &str, state: Arc<State>) -> Result<Vec<String>> {
     let payload: Ballot = serde_json::from_str(payload)?;
     trace!("payload: {payload:?}");
 
-    let current_count = state
-        // .lock()
-        // .await
-        // .unwrap()
-        .get_value(&payload.candidate);
-    state
-        // .lock()
-        // .await
-        // .unwrap()
-        .set_value(&payload.candidate, current_count + 1);
+    let locked_state = state;
+    let current_state = match locked_state.get_value("vote") {
+        Some(value) => {
+            let mut current_state = from_slice::<ContractData>(value.as_ref()).unwrap();
+            let idx = if payload.candidate == "0" {
+                0
+            } else if payload.candidate == "1" {
+                1
+            } else {
+                2
+            };
+            current_state.candidates[idx] += 1;
+            current_state
+        }
+        None => ContractData {
+            candidates: vec![0; CANDIDATES as usize],
+        },
+    };
+    trace!("current_state: {current_state:?}");
+    let encoded_state = to_vec(&current_state).unwrap();
+    locked_state.set_value("vote", &encoded_state);
 
     Ok(vec![])
 }
@@ -72,10 +93,10 @@ async fn vote_program(payload: &str, state: Arc<State>) -> Result<Vec<String>> {
 mod test {
     use super::*;
 
-    fn setup() -> (Vote, String) {
+    fn _setup() -> (Vote, String) {
         let payload = r#"
         {
-            "candidate": 0
+            "candidate": "0"
         }"#
         .into();
         let number_of_candidates = 3;
@@ -83,10 +104,23 @@ mod test {
         (vote, payload)
     }
 
-    #[test]
-    fn test_vote_program() {
-        let (_, _payload) = setup();
-        // let _res = vote_program(&payload).unwrap();
+    #[tokio::test]
+    async fn test_vote_program() {
+        let payload = r#"
+        {
+            "candidate": "0"
+        }"#;
+        let state = Arc::new(State::new());
+        let _res = vote_program(&payload, state.clone()).await;
+        let _res = vote_program(&payload, state.clone()).await;
+        let payload = r#"
+        {
+            "candidate": "1"
+        }"#;
+        let _res = vote_program(&payload, state.clone()).await;
+        let _res = vote_program(&payload, state.clone()).await;
+        let _res = vote_program(&payload, state.clone()).await;
+        let _res = vote_program(&payload, state).await;
     }
 
     #[test]

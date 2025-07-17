@@ -3,7 +3,7 @@ use log::trace;
 use rocksdb::{DB, Options};
 
 #[derive(Clone, Debug)]
-pub struct State(DashMap<String, u32>);
+pub struct State(DashMap<String, Vec<u8>>);
 impl Default for State {
     fn default() -> Self {
         Self::new()
@@ -20,18 +20,22 @@ impl State {
         self.0.contains_key(address)
     }
 
-    pub fn get_value(&self, key: &str) -> u32 {
+    pub fn get_value(&self, key: &str) -> Option<Vec<u8>> {
         let value = self.0.get(key);
         match value {
-            Some(v) => *v,
-            None => u32::default(),
+            Some(v) => {
+                let vec = v.to_owned();
+                Some(vec)
+            }
+            None => None,
         }
     }
 
-    pub fn set_value(&self, key: &str, value: u32) {
+    pub fn set_value(&self, key: &str, value: &[u8]) {
         trace!("key: {key:?}");
         // write_to_db(key, value);
         trace!("before: {:?}", self.0);
+        self.0.insert(key.into(), value.into());
         trace!("after: {:?}", self.0);
     }
 
