@@ -29,22 +29,22 @@ async fn main() {
     let args = Args::parse();
     let replica = args.replica;
 
+    let channel_size = 100;
+    let transactor = Arc::new(RwLock::new(Transactor::new(replica)));
+    let (tx, rx) = channel(channel_size);
+    let (tx_msg_queue, rx_msg_queue) = channel(channel_size);
+    let contract_map = Arc::new(RwLock::new(HashMap::new()));
+    let (plugin_tx, plugin_rx) = channel(channel_size);
+
     let handle = if !replica {
         spawn(async {
             let _res = start_quinn_server().await;
         })
     } else {
         spawn(async {
-            let _res = start_quinn_client().await; 
+            let _res = start_quinn_client().await;
         })
     };
-    let _r = join!(handle);
-
-    let transactor = Arc::new(RwLock::new(Transactor::new(false)));
-    let (tx, rx) = channel(100);
-    let (tx_msg_queue, rx_msg_queue) = channel(100);
-    let contract_map = Arc::new(RwLock::new(HashMap::new()));
-    let (plugin_tx, plugin_rx) = channel(100);
 
     let plugin_scanner_task = spawn(plugin_scanner_task(PATH.as_ref(), plugin_tx));
     let plugin_builder_task = spawn(plugin_builder(contract_map.clone(), plugin_rx));
@@ -66,7 +66,8 @@ async fn main() {
         receiver_task,
         plugin_scanner_task,
         web_task,
-        plugin_builder_task
+        plugin_builder_task,
+        handle
     );
 
     // let handles = spawn_all_tasks(
