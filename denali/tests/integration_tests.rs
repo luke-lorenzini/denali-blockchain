@@ -3,8 +3,8 @@ use std::sync::Arc;
 use async_trait::async_trait;
 use denali::{
     messaging::Meta,
+    processor::{Message, Processor},
     storage::State,
-    transactor::{Message, Transactor},
     types::{H256, Thing},
 };
 use semver::Version;
@@ -12,7 +12,7 @@ use serde::Deserialize;
 
 #[tokio::test]
 async fn test_modify_single_value() {
-    let mut transactor = Transactor::new(false);
+    let mut processor = Processor::new(false);
     let mut transactions = Vec::new();
     let fake = Box::new(FakeProgram) as Box<dyn Thing>;
     let payload = r#"
@@ -27,13 +27,13 @@ async fn test_modify_single_value() {
         metadata: Meta {},
     };
     transactions.push(message);
-    let res = transactor.create_new_block(transactions).await;
+    let res = processor.create_new_block(transactions).await;
     assert_eq!(res, true)
 }
 
 #[tokio::test]
 async fn test_add_one_block() {
-    let mut transactor = Transactor::new(false);
+    let mut processor = Processor::new(false);
     let mut transactions = Vec::new();
     let fake = Box::new(FakeProgram) as Box<dyn Thing>;
     let payload = r#"
@@ -48,16 +48,16 @@ async fn test_add_one_block() {
         metadata: Meta {},
     };
     transactions.push(message);
-    let res = transactor.create_new_block(transactions).await;
+    let res = processor.create_new_block(transactions).await;
     assert_eq!(res, true);
-    let res = transactor.get_height();
+    let res = processor.get_height();
     let expected = 2;
     assert_eq!(res, expected)
 }
 
 #[tokio::test]
 async fn test_add_multiple_blocks() {
-    let mut transactor = Transactor::new(false);
+    let mut processor = Processor::new(false);
     let mut transactions = vec![];
     let fake = Box::new(FakeProgram) as Box<dyn Thing>;
 
@@ -73,7 +73,7 @@ async fn test_add_multiple_blocks() {
         metadata: Meta {},
     };
     transactions.push(message);
-    let res = transactor.create_new_block(transactions).await;
+    let res = processor.create_new_block(transactions).await;
     let mut transactions = vec![];
     assert_eq!(res, true);
 
@@ -89,7 +89,7 @@ async fn test_add_multiple_blocks() {
         metadata: Meta {},
     };
     transactions.push(message);
-    let res = transactor.create_new_block(transactions).await;
+    let res = processor.create_new_block(transactions).await;
     let mut transactions = vec![];
     assert_eq!(res, true);
 
@@ -105,10 +105,10 @@ async fn test_add_multiple_blocks() {
         metadata: Meta {},
     };
     transactions.push(message);
-    let res = transactor.create_new_block(transactions).await;
+    let res = processor.create_new_block(transactions).await;
     assert_eq!(res, true);
 
-    let res = transactor.get_height();
+    let res = processor.get_height();
     let expected = 4;
     assert_eq!(res, expected)
 }

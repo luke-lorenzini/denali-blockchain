@@ -5,14 +5,14 @@ use tokio::sync::{RwLock, mpsc::Receiver};
 use crate::{
     messaging::Meta,
     plugins::Plugin,
-    transactor::{Message, Transactor},
+    processor::{Message, Processor},
     types::H256,
 };
 
 #[tracing::instrument]
-pub async fn transactor_task(
+pub async fn processor_task(
     contract_map: Arc<RwLock<HashMap<String, Plugin>>>,
-    transactor: Arc<RwLock<Transactor>>,
+    processor: Arc<RwLock<Processor>>,
     mut rx_msg_queue: Receiver<Vec<(H256, String, String, Meta)>>,
 ) {
     // receive a batch of messages
@@ -32,7 +32,7 @@ pub async fn transactor_task(
             };
             transactions.push(transaction);
         }
-        let _res = transactor
+        let _res = processor
             .clone()
             .write()
             .await

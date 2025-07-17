@@ -11,19 +11,19 @@ use tokio::sync::{RwLock, mpsc::Sender};
 use crate::{
     messaging::ResponseTx,
     plugins::Plugin,
-    transactor::Transactor,
+    processor::Processor,
     web::{WebState, endpoints::*},
 };
 
 #[tracing::instrument]
 pub async fn web_task(
     tx: Sender<ResponseTx>,
-    transactor: Arc<RwLock<Transactor>>,
+    processor: Arc<RwLock<Processor>>,
     contract_map: Arc<RwLock<HashMap<String, Plugin>>>,
     replica: bool,
 ) {
     let web_state = WebState {
-        transactor,
+        processor,
         tx,
         contract_map,
     };

@@ -11,7 +11,7 @@ use crate::{
     types::{H256, Thing},
 };
 
-pub mod transactor_task;
+pub mod processor_task;
 
 #[derive(Clone)]
 pub struct Message<T> {
@@ -22,14 +22,14 @@ pub struct Message<T> {
 }
 
 #[derive(Debug)]
-pub struct Transactor {
+pub struct Processor {
     pub chain: Chain,
 }
 
-impl Transactor {
+impl Processor {
     pub fn new(replica: bool) -> Self {
         let chain = Chain::new(replica);
-        Transactor { chain }
+        Processor { chain }
     }
 
     // todo: redundant, maybe remove
@@ -121,14 +121,14 @@ mod test {
 
     #[test]
     fn test_new_chain_from_default() {
-        let transactor = Transactor::new(false);
-        assert_eq!(transactor.chain.get_height(), 1)
+        let processor = Processor::new(false);
+        assert_eq!(processor.chain.get_height(), 1)
     }
 
     #[test]
     fn test_new_chain_get_height() {
-        let transactor = Transactor::new(false);
-        assert_eq!(transactor.get_height(), 1)
+        let processor = Processor::new(false);
+        assert_eq!(processor.get_height(), 1)
     }
 
     #[test]
@@ -141,8 +141,8 @@ mod test {
     //         payload: "".into(),
     //         tx_id: H256::dummy(),
     //     };
-    //     let transactor = Transactor::default();
-    //     let res = transactor.process_transaction(&message).await;
+    //     let processor = Processor::default();
+    //     let res = processor.process_transaction(&message).await;
     //     let expected = Ok(H256::dummy());
     //     assert_eq!(res, expected)
     // }
@@ -150,8 +150,8 @@ mod test {
     // #[tokio::test]
     // async fn test_process_transactions() {
     //     let transactions = vec![];
-    //     let transactor = Transactor::default();
-    //     let res = transactor.process_transactions(H256::dummy(), transactions).await;
+    //     let processor = Processor::default();
+    //     let res = processor.process_transactions(H256::dummy(), transactions).await;
     //     let _expected = vec![H256::new([227, 176, 196, 66, 152, 252, 28, 20, 154, 251, 244, 200, 153, 111, 185, 36, 39, 174, 65, 228, 100, 155, 147, 76, 164, 149, 153, 27, 120, 82, 184, 85])];
     //     let expected = vec![];
     //     assert_eq!(res, expected)
@@ -160,8 +160,8 @@ mod test {
     #[tokio::test]
     async fn test_create_new_block() {
         let messages = vec![];
-        let mut transactor = Transactor::new(false);
-        let res = transactor.create_new_block(messages).await;
+        let mut processor = Processor::new(false);
+        let res = processor.create_new_block(messages).await;
         let expected = true;
         assert_eq!(res, expected)
     }

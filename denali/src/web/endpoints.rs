@@ -40,17 +40,17 @@ pub async fn root() -> impl IntoResponse {
 }
 
 pub async fn get_height(State(state): State<WebState>) -> impl IntoResponse {
-    let height = state.transactor.read().await.chain.get_height().to_string();
+    let height = state.processor.read().await.chain.get_height().to_string();
     (StatusCode::OK, height)
 }
 
 pub async fn get_tip(State(state): State<WebState>) -> impl IntoResponse {
-    let tip = state.transactor.read().await.chain.get_tip().to_string();
+    let tip = state.processor.read().await.chain.get_tip().to_string();
     (StatusCode::OK, tip)
 }
 
 pub async fn get_chain(State(state): State<WebState>) -> impl IntoResponse {
-    let chain = state.transactor.read().await.chain.get_chain();
+    let chain = state.processor.read().await.chain.get_chain();
     // todo output as json
     let result = format!("{chain:?}");
     (StatusCode::OK, result)
@@ -62,7 +62,7 @@ pub async fn get_tx(
 ) -> impl IntoResponse {
     let tx_id = params.block_hash.try_into();
     if tx_id.is_ok() {
-        let chain = state.transactor.read().await.chain.get_tx(&tx_id.unwrap());
+        let chain = state.processor.read().await.chain.get_tx(&tx_id.unwrap());
         let result = format!("{chain:?}");
         return (StatusCode::OK, result);
     }
@@ -106,9 +106,9 @@ pub async fn is_block(
     println!("{params:?}");
     let block_hash = params.block_hash.try_into();
     if block_hash.is_ok() {
-        // todo - find a way to access chain without transactor
+        // todo - find a way to access chain without processor
         match state
-            .transactor
+            .processor
             .read()
             .await
             .chain
@@ -128,9 +128,9 @@ pub async fn block_header(
     println!("{params:?}");
     let block_hash = params.block_hash.try_into();
     if block_hash.is_ok() {
-        // todo - find a way to access chain without transactor
+        // todo - find a way to access chain without processor
         match state
-            .transactor
+            .processor
             .read()
             .await
             .chain
@@ -155,7 +155,7 @@ pub async fn block_transactions(
     let block_hash = params.block_hash.try_into();
     if block_hash.is_ok() {
         match state
-            .transactor
+            .processor
             .read()
             .await
             .chain
