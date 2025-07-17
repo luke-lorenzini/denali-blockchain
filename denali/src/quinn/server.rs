@@ -307,6 +307,6 @@ async fn process_get(
     // let data = fs::read(&real_path)
     // .context("failed reading file")
     // ?;
-    let data = processor.read().await.chain.transmit_blocks(None);
+    let data = processor.read().await.chain.transmit_blocks(None)?;
     Ok(data)
 }

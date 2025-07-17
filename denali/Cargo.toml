@@ -5,6 +5,7 @@ edition = "2024"
 default-run = "denali"
 
 [dependencies]
+anyhow.workspace = true
 async-trait.workspace = true
 axum.workspace = true
 borsh.workspace = true

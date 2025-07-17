@@ -119,7 +119,7 @@ pub async fn start_quinn_client(processor: Arc<RwLock<Processor>>) -> Result<(),
         .await
         // .map_err(|e| anyhow!("failed to read response: {}", e))
         ?;
-    processor.write().await.chain.add_received_blocks(resp);
+    processor.write().await.chain.add_received_blocks(resp)?;
     // let duration = response_start.elapsed();
     // eprintln!(
     //     "response received in {:?} - {} KiB/s",

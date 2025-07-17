@@ -1,3 +1,4 @@
+use anyhow::Result;
 use borsh::{BorshDeserialize, BorshSerialize};
 use chrono::Utc;
 use hex::encode;
@@ -28,7 +29,7 @@ pub struct ResponseRx {
     pub tx_id: H256,
 }
 
-pub async fn message_generator_task(tx: Sender<(String, String, Meta)>) {
+pub async fn message_generator_task(tx: Sender<(String, String, Meta)>) -> Result<()> {
     let mut flag = 0;
 
     loop {
@@ -65,8 +66,7 @@ pub async fn message_generator_task(tx: Sender<(String, String, Meta)>) {
         }
 
         tx.send((program.into(), payload.into(), Meta {}))
-            .await
-            .unwrap();
+            .await?;
     }
 }
 
@@ -74,7 +74,7 @@ pub async fn message_generator_task(tx: Sender<(String, String, Meta)>) {
 pub async fn receiver_task(
     tx_msg_queue: Sender<Vec<(H256, String, String, Meta)>>,
     mut rx: Receiver<ResponseTx>,
-) {
+) -> Result<()> {
     let mut transactions = Vec::new();
 
     while let Some(i) = rx.recv().await {
@@ -96,7 +96,9 @@ pub async fn receiver_task(
         transactions.push((tx_id, i.program, i.payload, i.metadata));
         if transactions.len() == BATCH_SIZE {
             let batch = std::mem::take(&mut transactions);
-            tx_msg_queue.send(batch).await.unwrap();
+            tx_msg_queue.send(batch).await?;
         }
     }
+
+    Ok(())
 }

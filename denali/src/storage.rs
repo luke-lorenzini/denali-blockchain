@@ -1,3 +1,4 @@
+use anyhow::Result;
 use dashmap::DashMap;
 use log::trace;
 use rocksdb::{DB, Options};
@@ -42,7 +43,7 @@ impl State {
     pub fn new_key_value() {}
 }
 
-fn _write_to_db(_key: &str, _value: u32) {
+fn _write_to_db(_key: &str, _value: u32) -> Result<()>{
     // Start: RocksDB
     // NB: db is automatically closed at end of lifetime
     let tempdir = tempfile::Builder::new()
@@ -51,15 +52,17 @@ fn _write_to_db(_key: &str, _value: u32) {
         .expect("Failed to create temporary path for the _path_for_rocksdb_storage");
     let path = tempdir.path();
     {
-        let db = DB::open_default(path).unwrap();
-        db.put(b"my key", b"my value").unwrap();
+        let db = DB::open_default(path)?;
+        db.put(b"my key", b"my value")?;
         match db.get(b"my key") {
-            Ok(Some(value)) => println!("retrieved value {}", String::from_utf8(value).unwrap()),
+            Ok(Some(value)) => println!("retrieved value {}", String::from_utf8(value)?),
             Ok(None) => println!("value not found"),
             Err(e) => println!("operational problem encountered: {e}"),
         }
-        db.delete(b"my key").unwrap();
+        db.delete(b"my key")?;
     }
     let _ = DB::destroy(&Options::default(), path);
     // End: RocksDB
+
+    Ok(())
 }

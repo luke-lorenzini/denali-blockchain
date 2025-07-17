@@ -1,7 +1,7 @@
 use std::{collections::HashMap, sync::Arc};
 
+use anyhow::Result;
 use hex::encode;
-use serde_json::Result;
 use sha2::{Digest, Sha256};
 use tokio::sync::Mutex;
 
@@ -61,17 +61,15 @@ impl Processor {
         &self,
         transactions: Vec<Message<Box<dyn Thing + Send + Sync>>>,
         transactions_map: Arc<Mutex<HashMap<H256, Transaction>>>,
-    ) -> Vec<H256> {
+    ) -> Result<Vec<H256>> {
         // fn process_transactions<T: Thing>(&self, transactions: Vec<Message<T>>) -> H256 {
         let mut res = vec![];
-        // let mut hasher = Sha256::new();
         for transaction in transactions {
             // 'tx' that gets written into the tx log should be based on tx details. This needs to be determined before it's processed, deterministically.
             // let tx = self.process_transaction(&transaction).await.unwrap();
-            let tx = self.parse(&transaction).await.unwrap();
+            let tx = self.parse(&transaction).await?;
             transactions_map
                 .lock()
-                // .unwrap()
                 .await
                 .insert(
                     transaction.tx_id.clone(),
@@ -81,27 +79,26 @@ impl Processor {
                         _logs: tx.1,
                     },
                 );
-            // hasher.update(tx.as_ref());
             res.push(transaction.tx_id);
         }
         // let res = hasher.finalize();
         // let merkle_tree_root = encode(res);
         // println!("{merkle_tree_root:?}");
         // merkle_tree_root.try_into().unwrap()
-        res
+        Ok(res)
     }
 
     // Process a batch of transactions
     pub async fn create_new_block(
         &mut self,
         messages: Vec<Message<Box<dyn Thing + Send + Sync>>>,
-    ) -> bool {
+    ) -> Result<bool> {
         // pub fn create_new_block<T: Thing>(&mut self, messages: Vec<Message<T>>) -> bool {
         let transactions = Arc::new(Mutex::new(HashMap::new()));
         let mut hasher = Sha256::new();
         let txs = self
             .process_transactions(messages, transactions.clone())
-            .await;
+            .await?;
         for tx in txs {
             hasher.update(tx.as_ref());
         }
@@ -111,7 +108,7 @@ impl Processor {
         let block_transactions = Arc::try_unwrap(transactions).unwrap().into_inner();
         self.chain
             .add_next_block(merkle_tree_root.try_into().unwrap(), block_transactions);
-        true
+        Ok(true)
     }
 }
 
@@ -161,7 +158,7 @@ mod test {
     async fn test_create_new_block() {
         let messages = vec![];
         let mut processor = Processor::new(false);
-        let res = processor.create_new_block(messages).await;
+        let res = processor.create_new_block(messages).await.unwrap();
         let expected = true;
         assert_eq!(res, expected)
     }
