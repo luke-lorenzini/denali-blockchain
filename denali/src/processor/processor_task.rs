@@ -1,6 +1,6 @@
 use std::{collections::HashMap, sync::Arc};
 
-use tokio::sync::{RwLock, mpsc::Receiver};
+use tokio::sync::{Notify, RwLock, mpsc::Receiver};
 
 use crate::{
     messaging::Meta,
@@ -14,6 +14,7 @@ pub async fn processor_task(
     contract_map: Arc<RwLock<HashMap<String, Plugin>>>,
     processor: Arc<RwLock<Processor>>,
     mut rx_msg_queue: Receiver<Vec<(H256, String, String, Meta)>>,
+    notify: Option<Arc<Notify>>,
 ) {
     // receive a batch of messages
     while let Some(messages) = rx_msg_queue.recv().await {
@@ -36,7 +37,7 @@ pub async fn processor_task(
             .clone()
             .write()
             .await
-            .create_new_block(transactions)
+            .create_new_block(transactions, notify.clone())
             .await;
     }
 }

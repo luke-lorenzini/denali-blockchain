@@ -3,7 +3,7 @@ use std::{collections::HashMap, sync::Arc};
 use anyhow::Result;
 use hex::encode;
 use sha2::{Digest, Sha256};
-use tokio::sync::Mutex;
+use tokio::sync::{Mutex, Notify};
 
 use crate::{
     chain::{Chain, Transaction},
@@ -89,6 +89,7 @@ impl Processor {
     pub async fn create_new_block(
         &mut self,
         messages: Vec<Message<Box<dyn Thing + Send + Sync>>>,
+        notify: Option<Arc<Notify>>,
     ) -> Result<bool> {
         // pub fn create_new_block<T: Thing>(&mut self, messages: Vec<Message<T>>) -> bool {
         let transactions = Arc::new(Mutex::new(HashMap::new()));
@@ -103,8 +104,11 @@ impl Processor {
         // all the tx hashes wrapped into one 'merkle tree' <- need to impl a real tree
         let merkle_tree_root = encode(res);
         let block_transactions = Arc::try_unwrap(transactions).unwrap().into_inner();
-        self.chain
-            .add_next_block(merkle_tree_root.try_into().unwrap(), block_transactions);
+        self.chain.add_next_block(
+            merkle_tree_root.try_into().unwrap(),
+            block_transactions,
+            notify,
+        );
         Ok(true)
     }
 }
@@ -155,7 +159,7 @@ mod test {
     async fn test_create_new_block() {
         let messages = vec![];
         let mut processor = Processor::new(false);
-        let res = processor.create_new_block(messages).await.unwrap();
+        let res = processor.create_new_block(messages, None).await.unwrap();
         let expected = true;
         assert_eq!(res, expected)
     }

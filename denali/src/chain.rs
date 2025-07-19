@@ -1,11 +1,12 @@
 use std::{collections::HashMap, sync::Arc};
 
-use anyhow::{Result, anyhow};
+use anyhow::{Result, bail};
 use borsh::{BorshDeserialize, BorshSerialize, from_slice, to_vec};
 use chrono::Utc;
 use hex::encode;
 use log::trace;
 use sha2::{Digest, Sha256};
+use tokio::sync::Notify;
 
 use crate::{constants::VERSION, messaging::Meta, storage::State, types::H256};
 
@@ -146,6 +147,7 @@ impl Chain {
         &mut self,
         merkle_tree_root: H256,
         transactions: HashMap<H256, Transaction>,
+        notify: Option<Arc<Notify>>,
     ) -> bool {
         let block = Block::new(
             self.get_block_hash().clone(),
@@ -156,6 +158,12 @@ impl Chain {
         self.tip = Some(block.block_hash.clone());
         self.blocks.insert(self.tip.clone().unwrap(), block);
         self.count += 1;
+
+        // notify
+        if let Some(notify) = notify {
+            notify.notify_one();
+        }
+
         true
     }
 
@@ -234,7 +242,7 @@ impl Chain {
             return Ok(None);
         } else if block_hash.is_some() && !self.blocks.contains_key(block_hash.unwrap()) {
             // hash cannot be found, consider returning result<error> here
-            return Err(anyhow!("Invalid block hash provided"));
+            bail!("Invalid block hash provided")
         }
         let mut result = Vec::with_capacity(self.count as usize);
         let mut block = self
@@ -293,11 +301,11 @@ mod test {
         let merkle_tree_root =
             H256::try_from("66687aadf862bd776c8fc18b8e9f8e20089714856ee233b3902a591d0d5f2925")
                 .unwrap();
-        chain.add_next_block(merkle_tree_root, HashMap::new());
+        chain.add_next_block(merkle_tree_root, HashMap::new(), None);
         let merkle_tree_root =
             H256::try_from("45687aadf862bd776c8fc18b8e9f8e20099714856ff233b3902a591d0d5f2925")
                 .unwrap();
-        chain.add_next_block(merkle_tree_root, HashMap::new());
+        chain.add_next_block(merkle_tree_root, HashMap::new(), None);
         let res = chain.transmit_blocks(Some(&H256::zero())).unwrap().unwrap();
         let decoded_chain: Vec<Block> = from_slice(&res).unwrap();
         assert_eq!(decoded_chain.len(), 2);
@@ -309,11 +317,11 @@ mod test {
         let merkle_tree_root =
             H256::try_from("66687aadf862bd776c8fc18b8e9f8e20089714856ee233b3902a591d0d5f2925")
                 .unwrap();
-        chain.add_next_block(merkle_tree_root, HashMap::new());
+        chain.add_next_block(merkle_tree_root, HashMap::new(), None);
         let merkle_tree_root =
             H256::try_from("45687aadf862bd776c8fc18b8e9f8e20099714856ff233b3902a591d0d5f2925")
                 .unwrap();
-        chain.add_next_block(merkle_tree_root, HashMap::new());
+        chain.add_next_block(merkle_tree_root, HashMap::new(), None);
         let res = chain.transmit_blocks(None).unwrap().unwrap();
         let decoded_chain: Vec<Block> = from_slice(&res).unwrap();
         assert_eq!(decoded_chain.len(), 3);
@@ -326,15 +334,15 @@ mod test {
         let merkle_tree_root =
             H256::try_from("66687aadf862bd776c8fc18b8e9f8e20089714856ee233b3902a591d0d5f2925")
                 .unwrap();
-        host_chain.add_next_block(merkle_tree_root, HashMap::new());
+        host_chain.add_next_block(merkle_tree_root, HashMap::new(), None);
         let merkle_tree_root =
             H256::try_from("45687aadf862bd776c8fc18b8e9f8e20099714856ff233b3902a591d0d5f2925")
                 .unwrap();
-        host_chain.add_next_block(merkle_tree_root, HashMap::new());
+        host_chain.add_next_block(merkle_tree_root, HashMap::new(), None);
         let merkle_tree_root =
             H256::try_from("34687aadf862bd776c8fc18b8e9f8e20088714856ff233b2802a591d0d5f2925")
                 .unwrap();
-        host_chain.add_next_block(merkle_tree_root, HashMap::new());
+        host_chain.add_next_block(merkle_tree_root, HashMap::new(), None);
 
         // Create a client chain.
         let mut client_chain = Chain::new(true);
@@ -420,7 +428,7 @@ mod test {
     #[test]
     fn test_add_next_block() {
         let mut chain = Chain::new(false);
-        let res = chain.add_next_block(H256::zero(), HashMap::new());
+        let res = chain.add_next_block(H256::zero(), HashMap::new(), None);
         let expected = true;
         assert_eq!(res, expected);
         assert_eq!(chain.count, 2)

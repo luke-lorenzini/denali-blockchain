@@ -27,7 +27,10 @@ async fn test_modify_single_value() {
         metadata: Meta {},
     };
     transactions.push(message);
-    let res = processor.create_new_block(transactions).await.unwrap();
+    let res = processor
+        .create_new_block(transactions, None)
+        .await
+        .unwrap();
     assert_eq!(res, true)
 }
 
@@ -48,7 +51,10 @@ async fn test_add_one_block() {
         metadata: Meta {},
     };
     transactions.push(message);
-    let res = processor.create_new_block(transactions).await.unwrap();
+    let res = processor
+        .create_new_block(transactions, None)
+        .await
+        .unwrap();
     assert_eq!(res, true);
     let res = processor.get_height();
     let expected = 2;
@@ -73,7 +79,10 @@ async fn test_add_multiple_blocks() {
         metadata: Meta {},
     };
     transactions.push(message);
-    let res = processor.create_new_block(transactions).await.unwrap();
+    let res = processor
+        .create_new_block(transactions, None)
+        .await
+        .unwrap();
     let mut transactions = vec![];
     assert_eq!(res, true);
 
@@ -89,7 +98,10 @@ async fn test_add_multiple_blocks() {
         metadata: Meta {},
     };
     transactions.push(message);
-    let res = processor.create_new_block(transactions).await.unwrap();
+    let res = processor
+        .create_new_block(transactions, None)
+        .await
+        .unwrap();
     let mut transactions = vec![];
     assert_eq!(res, true);
 
@@ -105,7 +117,10 @@ async fn test_add_multiple_blocks() {
         metadata: Meta {},
     };
     transactions.push(message);
-    let res = processor.create_new_block(transactions).await.unwrap();
+    let res = processor
+        .create_new_block(transactions, None)
+        .await
+        .unwrap();
     assert_eq!(res, true);
 
     let res = processor.get_height();

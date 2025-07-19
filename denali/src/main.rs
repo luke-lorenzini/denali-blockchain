@@ -11,7 +11,7 @@ use denali::{
 };
 use tokio::{
     join, spawn,
-    sync::{RwLock, mpsc::channel},
+    sync::{Notify, RwLock, mpsc::channel},
 };
 
 #[derive(Debug, Parser)]
@@ -29,6 +29,8 @@ async fn main() {
     let args = Args::parse();
     let replica = args.replica;
 
+    let notify = Arc::new(Notify::new());
+
     let channel_size = 100;
     let processor = Arc::new(RwLock::new(Processor::new(replica)));
     let (tx, rx) = channel(channel_size);
@@ -38,8 +40,9 @@ async fn main() {
 
     let handle = if !replica {
         let processor = processor.clone();
+        let notify = notify.clone();
         spawn(async move {
-            let _res = start_quinn_server(processor).await;
+            let _res = start_quinn_server(processor, notify).await;
         })
     } else {
         let processor = processor.clone();
@@ -55,6 +58,7 @@ async fn main() {
         contract_map.clone(),
         processor.clone(),
         rx_msg_queue,
+        Some(notify.clone()),
     ));
     let web_task = spawn(web_task(
         tx,
