@@ -1,16 +1,12 @@
 use std::{
-    error::Error,
     fs, io,
     net::{IpAddr, Ipv4Addr, SocketAddr},
-    path::{self, Path, PathBuf},
     sync::Arc,
 };
 
+use anyhow::{Result, bail};
 use directories_next::ProjectDirs;
-use log::{
-    // error,
-    info,
-};
+use log::info;
 use quinn::{Endpoint, ServerConfig};
 // use rustls::KeyLogFile;
 use quinn_proto::crypto::rustls::QuicServerConfig;
