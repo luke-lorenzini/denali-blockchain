@@ -1,5 +1,6 @@
 use std::{collections::HashMap, path::Path, sync::Arc};
 
+use anyhow::Result;
 use futures::{
     SinkExt, StreamExt,
     channel::mpsc::{Receiver, channel},
@@ -34,8 +35,8 @@ pub async fn plugin_builder(
 }
 
 #[tracing::instrument]
-pub async fn plugin_scanner_task(path: &Path, plugin_tx: Sender<(&str, Option<Plugin>)>) {
-    search_for_existing_plugins(path, plugin_tx.clone()).await;
+pub async fn plugin_scanner_task(path: &Path, plugin_tx: Sender<(&str, Option<Plugin>)>) -> Result<()> {
+    search_for_existing_plugins(path, plugin_tx.clone()).await?;
 
     // futures::executor::block_on(async {
     if let Err(e) = async_watch(path, plugin_tx).await {
@@ -43,9 +44,11 @@ pub async fn plugin_scanner_task(path: &Path, plugin_tx: Sender<(&str, Option<Pl
     }
     // });
     // });
+
+    Ok(())
 }
 
-fn async_watcher() -> notify::Result<(RecommendedWatcher, Receiver<notify::Result<Event>>)> {
+fn async_watcher() -> Result<(RecommendedWatcher, Receiver<notify::Result<Event>>)> {
     let (mut tx, rx) = channel(1);
 
     let watcher = RecommendedWatcher::new(
@@ -63,7 +66,7 @@ fn async_watcher() -> notify::Result<(RecommendedWatcher, Receiver<notify::Resul
 async fn async_watch<P: AsRef<Path>>(
     path: P,
     plugin_tx: Sender<(&str, Option<Plugin>)>,
-) -> notify::Result<()> {
+) -> Result<()> {
     let (mut watcher, mut rx) = async_watcher()?;
 
     watcher.watch(path.as_ref(), RecursiveMode::NonRecursive)?;
@@ -75,7 +78,7 @@ async fn async_watch<P: AsRef<Path>>(
                     if let EventKind::Modify(ModifyKind::Name(v)) = event.kind {
                         match v {
                             RenameMode::To => {
-                                let p = Plugin::build(path);
+                                let p = Plugin::build(path)?;
                                 let _x = plugin_tx.send((p.0, Some(p.1))).await;
                             }
                             RenameMode::From => {
@@ -94,7 +97,7 @@ async fn async_watch<P: AsRef<Path>>(
     Ok(())
 }
 
-async fn search_for_existing_plugins(path: &Path, plugin_tx: Sender<(&str, Option<Plugin>)>) {
+async fn search_for_existing_plugins(path: &Path, plugin_tx: Sender<(&str, Option<Plugin>)>) -> Result<()> {
     let path = path.join("*.so");
     let path = path.to_str().unwrap();
 
@@ -103,10 +106,12 @@ async fn search_for_existing_plugins(path: &Path, plugin_tx: Sender<(&str, Optio
             Ok(path) => {
                 println!("found {:?}", path.display());
                 let xxx = path;
-                let p = Plugin::build(xxx);
+                let p = Plugin::build(xxx)?;
                 let _x = plugin_tx.send((p.0, Some(p.1))).await;
             }
             Err(e) => println!("{e:?}"),
         }
     }
+
+    Ok(())
 }

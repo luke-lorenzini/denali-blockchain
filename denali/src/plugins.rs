@@ -1,5 +1,6 @@
 use std::{ffi::c_void, path::PathBuf};
 
+use anyhow::Result;
 use libloading::Library;
 
 use crate::Thing;
@@ -29,10 +30,10 @@ impl Plugin {
         }
     }
 
-    pub fn build(path: PathBuf) -> (&'static str, Plugin) {
+    pub fn build(path: PathBuf) -> Result<(&'static str, Plugin)> {
         unsafe {
-            let lib = libloading::Library::new(path).unwrap();
-            let func: libloading::Symbol<Contract> = lib.get(b"create_thing").unwrap();
+            let lib = libloading::Library::new(path)?;
+            let func: libloading::Symbol<Contract> = lib.get(b"create_thing")?;
             let xxx = func();
 
             let boxed_raw_trait_object = Box::from_raw(xxx.cast::<RawTraitObject>());
@@ -42,7 +43,7 @@ impl Plugin {
 
             let name = owned_plugin_box.name();
 
-            (name, Plugin::new(lib, owned_plugin_box))
+            Ok((name, Plugin::new(lib, owned_plugin_box)))
         }
     }
 }
