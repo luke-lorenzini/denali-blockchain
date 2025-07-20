@@ -55,7 +55,10 @@ use crate::{
 //     connection_limit: Option<usize>,
 // }
 
-pub async fn start_quinn_server(processor: Arc<RwLock<Processor>>) -> Result<(), Box<dyn Error>> {
+pub async fn start_quinn_server(
+    processor: Arc<RwLock<Processor>>,
+    notify: Arc<Notify>,
+) -> Result<()> {
     // let options: Opt;
 
     // Luke - start

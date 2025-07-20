@@ -22,7 +22,7 @@ use url::Url;
 
 use crate::{processor::Processor, quinn::ALPN_QUIC_HTTP};
 
-pub async fn start_quinn_client(_processor: Arc<RwLock<Processor>>) -> Result<()> {
+pub async fn start_quinn_client(processor: Arc<RwLock<Processor>>) -> Result<()> {
     // Luke - start
     rustls::crypto::ring::default_provider()
         .install_default()
