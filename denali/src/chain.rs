@@ -88,7 +88,7 @@ impl Block {
         // all transactions,
         // transaction metadata,
         // logs emitted by each transaction.
-        let header = Header::new(previous_block_hash.clone(), merkle_tree_root.clone());
+        let header = Header::new(previous_block_hash, merkle_tree_root);
         let block_hash = header.calc_hash();
         Self {
             block_hash,
@@ -123,8 +123,8 @@ impl Chain {
             None
         } else {
             let genesis = Block::genesis();
-            let tip = genesis.block_hash.clone();
-            blocks.insert(tip.clone(), genesis);
+            let tip = genesis.block_hash;
+            blocks.insert(tip, genesis);
             Some(tip)
         };
         Self {
@@ -140,7 +140,7 @@ impl Chain {
     }
 
     pub(crate) fn get_tip(&self) -> H256 {
-        self.tip.clone().unwrap()
+        self.tip.unwrap()
     }
 
     pub(crate) fn add_next_block(
@@ -149,14 +149,10 @@ impl Chain {
         transactions: HashMap<H256, Transaction>,
         notify: Option<Arc<Notify>>,
     ) -> bool {
-        let block = Block::new(
-            self.get_block_hash().clone(),
-            merkle_tree_root,
-            transactions,
-        );
+        let block = Block::new(self.get_block_hash(), merkle_tree_root, transactions);
         trace!("add_next_block block: {block:?}");
-        self.tip = Some(block.block_hash.clone());
-        self.blocks.insert(self.tip.clone().unwrap(), block);
+        self.tip = Some(block.block_hash);
+        self.blocks.insert(self.tip.unwrap(), block);
         self.count += 1;
 
         // notify
@@ -171,8 +167,8 @@ impl Chain {
         let decoded_blocks: Vec<Block> = from_slice(&encoded_blocks)?;
         for decoded_block in decoded_blocks {
             trace!("add_received_blocks block: {decoded_block:?}");
-            self.tip = Some(decoded_block.block_hash.clone());
-            self.blocks.insert(self.tip.clone().unwrap(), decoded_block);
+            self.tip = Some(decoded_block.block_hash);
+            self.blocks.insert(self.tip.unwrap(), decoded_block);
             self.count += 1;
         }
         Ok(true)
@@ -182,10 +178,12 @@ impl Chain {
         self.blocks.contains_key(&block_hash)
     }
 
+    // todo something to remove clone
     pub(crate) fn get_block_header(&self, block_hash: H256) -> Option<Header> {
         self.blocks.get(&block_hash).map(|h| h.header.clone())
     }
 
+    // todo something to remove clone
     pub(crate) fn get_block_transactions(
         &self,
         block_hash: H256,
@@ -194,25 +192,26 @@ impl Chain {
     }
 
     fn get_block_hash(&self) -> H256 {
-        self.tip.clone().unwrap()
+        self.tip.unwrap()
     }
 
     pub fn get_chain(&self) -> Vec<H256> {
-        let mut current = self.tip.clone().unwrap();
-        let mut res = vec![current.clone()];
-        println!("tip: {:?}", String::from(self.tip.clone().unwrap()));
+        let mut current = self.tip.unwrap();
+        let mut res = vec![current];
+        println!("tip: {:?}", String::from(self.tip.unwrap()));
 
         for _ in 0..self.count - 1 {
             let x = self.blocks.get(&current);
             if let Some(p) = x {
-                let previous = p.header.previous_block_hash.clone();
-                res.push(previous.clone());
+                let previous = p.header.previous_block_hash;
+                res.push(previous);
                 current = previous;
             }
         }
         res.into_iter().rev().collect()
     }
 
+    // todo, return a ref
     pub fn get_tx(&self, tx_id: &H256) -> String {
         println!("Searching... {tx_id:?}");
         for i in self.blocks.iter() {

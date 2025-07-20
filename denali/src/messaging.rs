@@ -80,15 +80,15 @@ pub async fn receiver_task(
         // confirm the rx'd message has been queued for processing. it could fail, but at this point, it'll be in the ledger
         let mut hasher = Sha256::new();
         hasher.update(Utc::now().timestamp_micros().to_le_bytes());
-        hasher.update(i.program.clone());
-        hasher.update(i.payload.clone());
+        hasher.update(&i.program);
+        hasher.update(&i.payload);
         // hasher.update(i.metadata);
         let res = hasher.finalize();
         let tx_id: H256 = encode(res).try_into().unwrap();
         trace!("tx hash: {tx_id:?}");
         let ack = ResponseRx {
             status: true,
-            tx_id: tx_id.clone(),
+            tx_id,
         };
         let _ = i.one_shot.send(ack);
 

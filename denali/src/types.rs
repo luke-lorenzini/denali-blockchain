@@ -14,7 +14,17 @@ use serde_json::{Result, Value};
 use crate::storage::State;
 
 #[derive(
-    AsRef, BorshDeserialize, BorshSerialize, Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd,
+    AsRef,
+    BorshDeserialize,
+    BorshSerialize,
+    Clone,
+    Copy,
+    Debug,
+    Eq,
+    Hash,
+    Ord,
+    PartialEq,
+    PartialOrd,
 )]
 pub struct H256([u8; 32]);
 

@@ -69,7 +69,7 @@ impl Processor {
             // let tx = self.process_transaction(&transaction).await.unwrap();
             let tx = self.parse(&transaction).await?;
             transactions_map.lock().await.insert(
-                transaction.tx_id.clone(),
+                transaction.tx_id,
                 Transaction {
                     tx: transaction.payload,
                     _metadata: transaction.metadata,
