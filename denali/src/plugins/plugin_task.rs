@@ -35,7 +35,10 @@ pub async fn plugin_builder(
 }
 
 #[tracing::instrument]
-pub async fn plugin_scanner_task(path: &Path, plugin_tx: Sender<(&str, Option<Plugin>)>) -> Result<()> {
+pub async fn plugin_scanner_task(
+    path: &Path,
+    plugin_tx: Sender<(&str, Option<Plugin>)>,
+) -> Result<()> {
     search_for_existing_plugins(path, plugin_tx.clone()).await?;
 
     // futures::executor::block_on(async {
@@ -97,7 +100,10 @@ async fn async_watch<P: AsRef<Path>>(
     Ok(())
 }
 
-async fn search_for_existing_plugins(path: &Path, plugin_tx: Sender<(&str, Option<Plugin>)>) -> Result<()> {
+async fn search_for_existing_plugins(
+    path: &Path,
+    plugin_tx: Sender<(&str, Option<Plugin>)>,
+) -> Result<()> {
     let path = path.join("*.so");
     let path = path.to_str().unwrap();
 
