@@ -15,53 +15,34 @@ use rustls::pki_types::{
     PrivateKeyDer,
     // PrivatePkcs8KeyDer
 };
-use tokio::sync::RwLock;
-
-use crate::{
-    processor::Processor,
-    // types::H256,
-    quinn::ALPN_QUIC_HTTP,
+use tokio::{
+    spawn,
+    sync::{Mutex, Notify, RwLock},
 };
 
-// #[derive(Parser, Debug)]
-// #[clap(name = "server")]
-// struct Opt {
-//     /// file to log TLS keys to for debugging
-//     // #[clap(long = "keylog")]
-//     keylog: bool,
-//     /// directory to serve files from
-//     root: PathBuf,
-//     /// TLS private key in PEM format
-//     // #[clap(short = 'k', long = "key", requires = "cert")]
-//     key: Option<PathBuf>,
-//     /// TLS certificate in PEM format
-//     // #[clap(short = 'c', long = "cert", requires = "key")]
-//     cert: Option<PathBuf>,
-//     /// Enable stateless retries
-//     // #[clap(long = "stateless-retry")]
-//     stateless_retry: bool,
-//     /// Address to listen on
-//     // #[clap(long = "listen", default_value = "[::1]:4433")]
-//     listen: SocketAddr,
-//     /// Client address to block
-//     // #[clap(long = "block")]
-//     block: Option<SocketAddr>,
-//     /// Maximum number of concurrent connections to allow
-//     // #[clap(long = "connection-limit")]
-//     connection_limit: Option<usize>,
-// }
+use crate::{processor::Processor, quinn::ALPN_QUIC_HTTP};
+
+type NotificationClients = Arc<Mutex<Vec<quinn::SendStream>>>;
 
 pub async fn start_quinn_server(
     processor: Arc<RwLock<Processor>>,
     notify: Arc<Notify>,
 ) -> Result<()> {
-    // let options: Opt;
-
     // Luke - start
     rustls::crypto::ring::default_provider()
         .install_default()
         .expect("Failed to install rustls crypto provider");
     // Luke - end
+
+    let clients: NotificationClients = Arc::new(Mutex::new(Vec::new()));
+    let clients_clone = clients.clone();
+
+    spawn(async move {
+        loop {
+            notify.notified().await;
+            broadcast_notification(clients_clone.clone(), b"000Event occurred!\n").await;
+        }
+    });
 
     let (certs, key) =
     // if let (Some(key_path), Some(cert_path)) = (&options.key, &options.cert) {
@@ -113,9 +94,8 @@ pub async fn start_quinn_server(
                 // (cert, key.into())
                 todo!()
             }
-            Err(_e) => {
-            //     bail!("failed to read certificate: {}", e);
-                todo!()
+            Err(e) => {
+                bail!("failed to read certificate: {e}");
             }
         };
 
@@ -137,16 +117,16 @@ pub async fn start_quinn_server(
 
     // Luke - Start
     // let root = Arc::<Path>::from(options.root.clone());
-    pub const PATH: &str = "./stuffs";
-    let root = Arc::<Path>::from(PATH.as_ref());
+    // pub const PATH: &str = "./stuffs";
+    // let root = Arc::<Path>::from(PATH.as_ref());
     // Luke - End
-    if !root.exists() {
-        //     bail!("root path does not exist");
-        todo!()
-    }
+    // if !root.exists() {
+    //         bail!("root path does not exist");
+    // }
 
     // Luke - Start
     // let endpoint = Endpoint::server(server_config, options.listen)?;
+    // todo get this address as a runtime param
     let socket = SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), 4433);
     let endpoint = Endpoint::server(server_config, socket)?;
     // Luke - End
@@ -167,7 +147,7 @@ pub async fn start_quinn_server(
         //     conn.retry().unwrap();
         // } else {
         println!("accepting connection");
-        let fut = handle_connection(root.clone(), conn, processor.clone());
+        let fut = handle_connection(conn, processor.clone(), clients.clone());
         tokio::spawn(async move {
             if let Err(e) = fut.await {
                 println!("connection failed: {reason}", reason = e)
@@ -180,11 +160,28 @@ pub async fn start_quinn_server(
 }
 
 async fn handle_connection(
-    root: Arc<Path>,
+    // root: Arc<Path>,
     conn: quinn::Incoming,
     processor: Arc<RwLock<Processor>>,
-) -> Result<(), Box<dyn Error>> {
+    clients: NotificationClients,
+) -> Result<()> {
     let connection = conn.await?;
+
+    let (notify_send, mut notify_recv) = connection.accept_bi().await?;
+    let mut tag = [0u8; 6];
+    notify_recv.read_exact(&mut tag).await?;
+
+    if &tag != b"NOTIFY" {
+        bail!("First stream from client must be NOTIFY")
+    }
+
+    {
+        let mut locked = clients.lock().await;
+        locked.push(notify_send);
+    }
+
+    println!("client registered for notifications");
+
     // let span = info_span!(
     //     "connection",
     //     remote = %connection.remote_address(),
@@ -195,47 +192,68 @@ async fn handle_connection(
     //         .protocol
     //         .map_or_else(|| "<none>".into(), |x| String::from_utf8_lossy(&x).into_owned())
     // );
-    async {
-        println!("established");
+    // async {
+    println!("established");
 
-        // Each stream initiated by the client constitutes a new request.
-        loop {
-            let stream = connection.accept_bi().await;
-            let stream = match stream {
-                Err(quinn::ConnectionError::ApplicationClosed { .. }) => {
-                    println!("connection closed");
-                    return Ok(());
+    // let (notify_send, _) = connection.accept_bi().await?;
+    // {
+    //     let mut locked = clients.lock().await;
+    //     locked.push(notify_send);
+    // }
+
+    // Each stream initiated by the client constitutes a new request.
+    loop {
+        let (send, mut recv) = match connection.accept_bi().await {
+            Ok(s) => s,
+            Err(quinn::ConnectionError::ApplicationClosed { .. }) => {
+                println!("connection closed");
+                return Ok(());
+            }
+            Err(e) => bail!("connection error: {e}"),
+        };
+
+        let mut tag = [0u8; 6];
+        if let Err(e) = recv.read_exact(&mut tag).await {
+            eprintln!("[server] stream dropped early: {e}");
+            continue;
+        }
+
+        if &tag == b"REQUES" {
+            let proc = processor.clone();
+            tokio::spawn(async move {
+                if let Err(e) = handle_request((send, recv), proc).await {
+                    eprintln!("request failed: {e}");
                 }
-                Err(e) => {
-                    return Err(e);
+            });
+        } else if &tag == b"SYNCXX" {
+            println!("Received SYNCXX request");
+            let proc = processor.clone();
+            tokio::spawn(async move {
+                if let Err(e) = handle_request((send, recv), proc).await {
+                    eprintln!("request failed: {e}");
                 }
-                Ok(s) => s,
-            };
-            let fut = handle_request(root.clone(), stream, processor.clone());
-            tokio::spawn(
-                async move {
-                    if let Err(e) = fut.await {
-                        println!("failed: {reason}", reason = e);
-                    }
-                }, // .instrument(info_span!("request")),
-            );
+            });
+        } else {
+            eprintln!("unrecognized stream type: {:?}", &tag);
         }
     }
+    // }
     // .instrument(span)
-    .await?;
-    Ok(())
+    // .await?;
+    // Ok(())
 }
 
 async fn handle_request(
-    root: Arc<Path>,
+    // root: Arc<Path>,
     (mut send, mut recv): (quinn::SendStream, quinn::RecvStream),
     processor: Arc<RwLock<Processor>>,
-) -> Result<(), Box<dyn Error>> {
+) -> Result<()> {
     let req = recv
         .read_to_end(64 * 1024)
         .await
 //         .map_err(|e| anyhow!("failed reading request: {}", e))?
         ?;
+    dbg!(&req);
     // let mut escaped = String::new();
     // for &x in &req[..] {
     //     let part = ascii::escape_default(x).collect::<Vec<_>>();
@@ -243,7 +261,7 @@ async fn handle_request(
     // }
     // info!(content = %escaped);
     // Execute the request
-    let resp = process_get(&root, &req, processor)
+    let resp = process_get(&req, processor)
         .await
         // .unwrap_or_else(|e| {
         //     error!("failed: {}", e);
@@ -252,13 +270,11 @@ async fn handle_request(
         .unwrap();
 
     if let Some(resp) = resp {
-        // for r in resp {
         // Write the response
         send.write_all(&resp)
                 .await
                 // .map_err(|e| anyhow!("failed to send response: {}", e))
                 ?;
-        // }
         // Gracefully terminate the stream
         send.finish().unwrap();
     }
@@ -267,45 +283,87 @@ async fn handle_request(
 }
 
 async fn process_get(
-    root: &Path,
+    // _root: &Path,
     x: &[u8],
     processor: Arc<RwLock<Processor>>,
-) -> Result<Option<Vec<u8>>, Box<dyn Error>> {
-    if x.len() < 4 || &x[0..4] != b"GET " {
-        //         bail!("missing GET");
-    }
-    if x[4..].len() < 2 || &x[x.len() - 2..] != b"\r\n" {
-        //         bail!("missing \\r\\n");
-    }
-    let x = &x[4..x.len() - 2];
-    let end = x.iter().position(|&c| c == b' ').unwrap_or(x.len());
-    let path = str::from_utf8(&x[..end])
-        // .unwrap()
-        // .context("path is malformed UTF-8")?
-        ?;
-    let path = Path::new(&path);
-    let mut real_path = PathBuf::from(root);
-    let mut components = path.components();
-    match components.next() {
-        Some(path::Component::RootDir) => {}
-        _ => {
-            // bail!("path must be absolute");
-            todo!()
-        }
-    }
-    for c in components {
-        match c {
-            path::Component::Normal(x) => {
-                real_path.push(x);
-            }
-            _x => {
-                // bail!("illegal component in path: {:?}", x);
-            }
-        }
-    }
+) -> Result<Option<Vec<u8>>> {
+    dbg!(&x);
+    // if x.len() < 4 || &x[0..4] != b"GET " {
+    //     //         bail!("missing GET");
+    // }
+    // if x[4..].len() < 2 || &x[x.len() - 2..] != b"\r\n" {
+    //     //         bail!("missing \\r\\n");
+    // }
+    // let x = &x[4..x.len() - 2];
+    // let end = x.iter().position(|&c| c == b' ').unwrap_or(x.len());
+    // let path = str::from_utf8(&x[..end])
+    //     // .unwrap()
+    //     // .context("path is malformed UTF-8")?
+    //     ?;
+    // let path = Path::new(&path);
+    // let mut real_path = PathBuf::from(root);
+    // let mut components = path.components();
+    // match components.next() {
+    //     Some(path::Component::RootDir) => {}
+    //     _ => {
+    //         // bail!("path must be absolute");
+    //         todo!()
+    //     }
+    // }
+    // for c in components {
+    //     match c {
+    //         path::Component::Normal(x) => {
+    //             real_path.push(x);
+    //         }
+    //         _x => {
+    //             // bail!("illegal component in path: {:?}", x);
+    //         }
+    //     }
+    // }
     // let data = fs::read(&real_path)
     // .context("failed reading file")
     // ?;
     let data = processor.read().await.chain.transmit_blocks(None)?;
     Ok(data)
+}
+
+// pub async fn broadcast_notification(
+//     clients: NotificationClients,
+//     message: &[u8],
+// ) {
+
+//         // println!("notified of new block {message:?} \n clients: {clients:?}");
+
+//     let mut clients_lock = clients.lock().await;
+
+//     clients_lock.retain_mut(|stream| {
+//         let fut = stream.write_all(message);
+//         match futures::executor::block_on(fut) {
+//             Ok(_) => true,
+//             Err(e) => {
+//                 eprintln!("client disconnected: {e}");
+//                 false
+//             }
+//         }
+//     });
+
+// }
+
+pub async fn broadcast_notification(clients: NotificationClients, message: &[u8]) {
+    let mut clients_lock = clients.lock().await;
+
+    // println!("notified!");
+
+    let mut i = 0;
+    while i < clients_lock.len() {
+        // println!("notified! {:?} {:?}", message, clients_lock);
+        let result = clients_lock[i].write_all(message).await;
+        if result.is_err() {
+            eprintln!("client disconnected: {:?}", result.err());
+            clients_lock.remove(i);
+        } else {
+            i += 1;
+            // println!("increment");
+        }
+    }
 }
