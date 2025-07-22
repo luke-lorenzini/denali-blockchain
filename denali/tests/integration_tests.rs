@@ -1,5 +1,6 @@
 use std::sync::Arc;
 
+use anyhow::Result;
 use async_trait::async_trait;
 use denali::{
     messaging::Meta,
@@ -151,7 +152,7 @@ impl Thing for FakeProgram {
         &self,
         payload: &str,
         state: Arc<State>,
-    ) -> serde_json::Result<(bool, Vec<String>)> {
+    ) -> Result<(bool, Vec<String>)> {
         println!("run");
         println!("{payload:?}");
         println!("{state:?}");
@@ -164,7 +165,7 @@ impl Thing for FakeProgram {
         Ok((true, vec![]))
     }
 
-    fn verify(&self) -> serde_json::Result<bool> {
+    fn verify(&self) -> Result<bool> {
         println!("verify");
         Ok(true)
     }

@@ -1,5 +1,6 @@
 use std::sync::Arc;
 
+use anyhow::Result;
 use async_trait::async_trait;
 use borsh::{BorshDeserialize, BorshSerialize, from_slice, to_vec};
 use denali::{storage::State, types::Thing};
@@ -7,7 +8,6 @@ use log::trace;
 use macros::generate_create_thing;
 use semver::Version;
 use serde::Deserialize;
-use serde_json::Result;
 
 const CANDIDATES: u32 = 3;
 #[generate_create_thing(args(CANDIDATES))]
