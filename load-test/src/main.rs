@@ -19,7 +19,7 @@
 
 use goose::prelude::*;
 use serde_json::json;
-// use std::time::Duration;
+use std::time::Duration;
 
 #[tokio::main(flavor = "multi_thread")]
 async fn main() -> Result<(), GooseError> {
@@ -28,7 +28,7 @@ async fn main() -> Result<(), GooseError> {
         .register_scenario(
             scenario!("WebsiteUser")
                 // After each transactions runs, sleep randomly from 5 to 15 seconds.
-                // .set_wait_time(Duration::from_secs(5), Duration::from_secs(15))?
+                .set_wait_time(Duration::from_secs(5), Duration::from_secs(15))?
                 // This transaction only runs one time when the user first starts.
                 // .register_transaction(transaction!(submit_tx).set_on_start())
                 // These next two transactions run repeatedly as long as the load test is running.
