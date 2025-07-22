@@ -1,7 +1,7 @@
 use std::{
     fs, io,
     net::{IpAddr, Ipv4Addr, SocketAddr},
-    sync::Arc,
+    sync::Arc, time::Duration,
 };
 
 use anyhow::{Result, bail};
@@ -20,7 +20,7 @@ use tokio::{
     sync::{Mutex, Notify, RwLock},
 };
 
-use crate::{processor::Processor, quinn::ALPN_QUIC_HTTP};
+use crate::{processor::Processor, quinn::ALPN_QUIC_HTTP, types::H256};
 
 type NotificationClients = Arc<Mutex<Vec<quinn::SendStream>>>;
 
@@ -114,6 +114,8 @@ pub async fn start_quinn_server(
         ServerConfig::with_crypto(Arc::new(QuicServerConfig::try_from(server_crypto)?));
     let transport_config = Arc::get_mut(&mut server_config.transport).unwrap();
     transport_config.max_concurrent_uni_streams(0_u8.into());
+    transport_config.keep_alive_interval(Some(Duration::from_secs(10)));
+    transport_config.max_idle_timeout(Some(Duration::from_secs(300).try_into().unwrap()));
 
     // Luke - Start
     // let root = Arc::<Path>::from(options.root.clone());
@@ -160,7 +162,6 @@ pub async fn start_quinn_server(
 }
 
 async fn handle_connection(
-    // root: Arc<Path>,
     conn: quinn::Incoming,
     processor: Arc<RwLock<Processor>>,
     clients: NotificationClients,
@@ -181,27 +182,6 @@ async fn handle_connection(
     }
 
     println!("client registered for notifications");
-
-    // let span = info_span!(
-    //     "connection",
-    //     remote = %connection.remote_address(),
-    //     protocol = %connection
-    //         .handshake_data()
-    //         .unwrap()
-    //         .downcast::<quinn::crypto::rustls::HandshakeData>().unwrap()
-    //         .protocol
-    //         .map_or_else(|| "<none>".into(), |x| String::from_utf8_lossy(&x).into_owned())
-    // );
-    // async {
-    println!("established");
-
-    // let (notify_send, _) = connection.accept_bi().await?;
-    // {
-    //     let mut locked = clients.lock().await;
-    //     locked.push(notify_send);
-    // }
-
-    // Each stream initiated by the client constitutes a new request.
     loop {
         let (send, mut recv) = match connection.accept_bi().await {
             Ok(s) => s,
@@ -215,53 +195,74 @@ async fn handle_connection(
         let mut tag = [0u8; 6];
         if let Err(e) = recv.read_exact(&mut tag).await {
             eprintln!("[server] stream dropped early: {e}");
-            continue;
+            // continue;
+            todo!();
         }
-
-        if &tag == b"REQUES" {
+        if &tag == b"SYNCRO" {
+            // println!("Received SYNCRO request");
             let proc = processor.clone();
             tokio::spawn(async move {
-                if let Err(e) = handle_request((send, recv), proc).await {
+                if let Err(e) = handle_syncro_request((send, recv), proc).await {
                     eprintln!("request failed: {e}");
                 }
             });
-        } else if &tag == b"SYNCXX" {
-            println!("Received SYNCXX request");
+        } 
+        else if &tag == b"UPDATE" {
+            // println!("Received UPDATE request");
             let proc = processor.clone();
             tokio::spawn(async move {
-                if let Err(e) = handle_request((send, recv), proc).await {
+                // todo: replace None with Some<T>
+                if let Err(e) = handle_update_request((send, recv), proc).await {
                     eprintln!("request failed: {e}");
                 }
             });
-        } else {
+        } 
+        else if &tag == b"NOTIFY" {
+            println!("Received NOTIFY request");
+            todo!()
+        } 
+        else {
             eprintln!("unrecognized stream type: {:?}", &tag);
         }
     }
-    // }
-    // .instrument(span)
-    // .await?;
-    // Ok(())
 }
 
-async fn handle_request(
-    // root: Arc<Path>,
-    (mut send, mut recv): (quinn::SendStream, quinn::RecvStream),
-    processor: Arc<RwLock<Processor>>,
-) -> Result<()> {
-    let req = recv
-        .read_to_end(64 * 1024)
-        .await
-//         .map_err(|e| anyhow!("failed reading request: {}", e))?
-        ?;
-    dbg!(&req);
+async fn handle_update_request( (mut send, mut recv): (quinn::SendStream, quinn::RecvStream),
+    processor: Arc<RwLock<Processor>>,) -> Result<()> {
+
+        let req = recv
+        // .read_to_end(64 * 1024)
+        .read_to_end(32)
+        .await?;
+    // dbg!(&req);
     // let mut escaped = String::new();
     // for &x in &req[..] {
     //     let part = ascii::escape_default(x).collect::<Vec<_>>();
     //     escaped.push_str(str::from_utf8(&part).unwrap());
     // }
     // info!(content = %escaped);
+
+        // println!("{req:?}");
+        let mut xxx = vec![];
+        
+        if req.len() < 32 {
+            bail!("bad response rx'd")
+        }
+    for i in 0..=31 {
+        xxx.push(req[i]);
+    }
+    // println!("{xxx:?}");
+    let block_hash = match H256::try_from(xxx) {
+        Ok(v) => v,
+        Err(_) => bail!("uh oh")
+    };
+    let block_hash = Some(&block_hash);
+    // let block_hash = Some(&block_hash);
+    // println!("{block_hash:?}");
+
     // Execute the request
-    let resp = process_get(&req, processor)
+    // let block_hash = None;
+    let resp = process_get(&req, processor, block_hash)
         .await
         // .unwrap_or_else(|e| {
         //     error!("failed: {}", e);
@@ -276,18 +277,61 @@ async fn handle_request(
                 // .map_err(|e| anyhow!("failed to send response: {}", e))
                 ?;
         // Gracefully terminate the stream
-        send.finish().unwrap();
+        send.finish()?;
     }
+    info!("complete");
+    Ok(())
+}
+
+async fn handle_syncro_request(
+    // root: Arc<Path>,
+    (mut send, mut recv): (quinn::SendStream, quinn::RecvStream),
+    processor: Arc<RwLock<Processor>>,
+) -> Result<()> {
+    let req = recv
+        .read_to_end(64 * 1024)
+        // .read_to_end(32)
+        .await
+//         .map_err(|e| anyhow!("failed reading request: {}", e))?
+        ?;
+    // dbg!(&req);
+    // let mut escaped = String::new();
+    // for &x in &req[..] {
+    //     let part = ascii::escape_default(x).collect::<Vec<_>>();
+    //     escaped.push_str(str::from_utf8(&part).unwrap());
+    // }
+    // info!(content = %escaped);
+    // Execute the request
+    let resp = process_get(&req, processor, None)
+        .await
+        // .unwrap_or_else(|e| {
+        //     error!("failed: {}", e);
+        //     format!("failed to process request: {e}\n").into_bytes()
+        // })
+        .unwrap();
+
+    match resp {
+        Some(resp) => {
+            // Write the response
+            send.write_all(&resp)
+                    .await
+                    ?;
+        }
+        None => todo!()
+    }
+    // Gracefully terminate the stream
+        send.finish()?;
     info!("complete");
     Ok(())
 }
 
 async fn process_get(
     // _root: &Path,
-    x: &[u8],
+    _x: &[u8],
     processor: Arc<RwLock<Processor>>,
+    block_hash: Option<&H256>
 ) -> Result<Option<Vec<u8>>> {
-    dbg!(&x);
+    // dbg!(&x);
     // if x.len() < 4 || &x[0..4] != b"GET " {
     //     //         bail!("missing GET");
     // }
@@ -323,47 +367,22 @@ async fn process_get(
     // let data = fs::read(&real_path)
     // .context("failed reading file")
     // ?;
-    let data = processor.read().await.chain.transmit_blocks(None)?;
+    let data = processor.read().await.chain.transmit_blocks(block_hash)?;
     Ok(data)
 }
 
-// pub async fn broadcast_notification(
-//     clients: NotificationClients,
-//     message: &[u8],
-// ) {
-
-//         // println!("notified of new block {message:?} \n clients: {clients:?}");
-
-//     let mut clients_lock = clients.lock().await;
-
-//     clients_lock.retain_mut(|stream| {
-//         let fut = stream.write_all(message);
-//         match futures::executor::block_on(fut) {
-//             Ok(_) => true,
-//             Err(e) => {
-//                 eprintln!("client disconnected: {e}");
-//                 false
-//             }
-//         }
-//     });
-
-// }
-
+// Notify the connected clients that a new block is ready.
 pub async fn broadcast_notification(clients: NotificationClients, message: &[u8]) {
     let mut clients_lock = clients.lock().await;
 
-    // println!("notified!");
-
     let mut i = 0;
     while i < clients_lock.len() {
-        // println!("notified! {:?} {:?}", message, clients_lock);
         let result = clients_lock[i].write_all(message).await;
         if result.is_err() {
             eprintln!("client disconnected: {:?}", result.err());
             clients_lock.remove(i);
         } else {
             i += 1;
-            // println!("increment");
         }
     }
 }

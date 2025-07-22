@@ -3,13 +3,14 @@ use std::{
     sync::Arc,
 };
 
+use anyhow::Result;
 use async_trait::async_trait;
 use borsh::{BorshDeserialize, BorshSerialize};
 use derive_more::AsRef;
 use hex::{decode, encode};
 use semver::Version;
 use serde::{Deserialize, Serialize};
-use serde_json::{Result, Value};
+use serde_json::Value;
 
 use crate::storage::State;
 
@@ -56,10 +57,22 @@ impl Display for H256 {
 impl TryFrom<String> for H256 {
     type Error = &'static str;
 
-    fn try_from(value: String) -> std::result::Result<Self, Self::Error> {
+    fn try_from(value: String) -> Result<Self, Self::Error> {
         let decoded = decode(value).map_err(|_e| "Failed to decode")?;
         let inner: [u8; 32] = decoded.try_into().map_err(|_e| "Failed to convert")?;
         Ok(Self(inner))
+    }
+}
+
+impl TryFrom<Vec<u8>> for H256 {
+    type Error = &'static str;
+
+    fn try_from(value: Vec<u8>) -> Result<Self, Self::Error> {
+        if value.len() == 32 {
+            Ok(H256::new(value.try_into().expect("Already checked")))
+        } else {
+            Err("Value is not correct length")
+        }
     }
 }
 
@@ -72,7 +85,7 @@ impl From<H256> for String {
 impl TryFrom<&str> for H256 {
     type Error = &'static str;
 
-    fn try_from(value: &str) -> std::result::Result<Self, Self::Error> {
+    fn try_from(value: &str) -> Result<Self, Self::Error> {
         let inner: [u8; 32] = decode(value)
             .unwrap()
             .try_into()
