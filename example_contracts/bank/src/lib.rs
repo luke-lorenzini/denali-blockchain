@@ -1,12 +1,12 @@
 use std::{collections::HashMap, sync::Arc};
 
+use anyhow::Result;
 use async_trait::async_trait;
 use denali::{storage::State, types::Thing};
 use macros::generate_create_thing;
 use rust_decimal::{Decimal, dec};
 use semver::Version;
 use serde::Deserialize;
-use serde_json::Result;
 
 #[generate_create_thing(args(vec![]))]
 #[derive(Clone, Debug)]
