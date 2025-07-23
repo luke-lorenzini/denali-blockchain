@@ -153,7 +153,7 @@ pub async fn start_quinn_server(
         let fut = handle_connection(conn, processor.clone(), clients.clone());
         tokio::spawn(async move {
             if let Err(e) = fut.await {
-                println!("connection failed: {reason}", reason = e)
+                println!("connection failed: {e}");
             }
         });
         // }

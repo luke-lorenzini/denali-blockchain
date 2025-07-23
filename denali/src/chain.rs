@@ -214,7 +214,7 @@ impl Chain {
     // todo, return a ref
     pub fn get_tx(&self, tx_id: &H256) -> String {
         println!("Searching... {tx_id:?}");
-        for i in self.blocks.iter() {
+        for i in &self.blocks {
             if let Some(v) = i.1.transactions.get(tx_id) {
                 return v.tx.clone();
             }

@@ -41,7 +41,7 @@ async fn main() -> Result<(), GooseError> {
 }
 
 /// Demonstrates how to log in when a user starts. We flag this transaction as an
-/// on_start transaction when registering it above. This means it only runs one time
+/// `on_start` transaction when registering it above. This means it only runs one time
 /// per user, when the user thread first starts.
 async fn _website_login(user: &mut GooseUser) -> TransactionResult {
     let params = [("username", "test_user"), ("password", "")];

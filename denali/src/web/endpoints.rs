@@ -58,7 +58,7 @@ pub async fn get_chain(State(state): State<WebState>) -> impl IntoResponse {
 
 pub async fn chain_hash(State(state): State<WebState>) -> impl IntoResponse {
     let chain = state.processor.read().await.chain.get_chain_hash();
-    let result = format!("{:?}", chain);
+    let result = format!("{chain:?}");
     (StatusCode::OK, result)
 }
 
@@ -168,7 +168,7 @@ pub async fn block_transactions(
             .get_block_transactions(block_hash.unwrap())
         {
             Some(b) => {
-                let xxx = format!("{:?}", b);
+                let xxx = format!("{b:?}");
                 return (StatusCode::OK, xxx);
             }
             None => return (StatusCode::OK, "doesn't exists".into()),

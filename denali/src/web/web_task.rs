@@ -41,7 +41,7 @@ pub async fn web_task(
         .route("/get/chain-hash", get(chain_hash))
         .with_state(web_state);
 
-    let address = format!("0.0.0.0:{}", web_port_number);
+    let address = format!("0.0.0.0:{web_port_number}");
     let listener = tokio::net::TcpListener::bind(address).await.unwrap();
     axum::serve(listener, app).await.unwrap();
 }

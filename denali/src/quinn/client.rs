@@ -6,10 +6,6 @@ use std::{
     },
     net::{IpAddr, Ipv4Addr, SocketAddr, ToSocketAddrs},
     sync::Arc,
-    time::{
-        Duration,
-        // Instant
-    },
 };
 
 use anyhow::Result;
@@ -59,7 +55,7 @@ pub async fn start_quinn_client(processor: Arc<RwLock<Processor>>, port_number: 
                 info!("local server certificate not found");
             }
             Err(e) => {
-                error!("failed to open local server certificate: {}", e);
+                error!("failed to open local server certificate: {e}");
             }
         }
     }
@@ -248,8 +244,4 @@ fn strip_ipv6_brackets(host: &str) -> &str {
     } else {
         host
     }
-}
-
-fn _duration_secs(x: &Duration) -> f32 {
-    x.as_secs() as f32 + x.subsec_nanos() as f32 * 1e-9
 }
