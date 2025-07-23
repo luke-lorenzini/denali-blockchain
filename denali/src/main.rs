@@ -19,6 +19,12 @@ use tokio::{
 struct Args {
     #[clap(short, long, default_value_t = false, action = clap::ArgAction::Set)]
     replica: bool,
+
+    #[clap(short, long, default_value_t = 3000, action = clap::ArgAction::Set)]
+    web_port_number: u16,
+
+    #[clap(short, long, default_value_t = 4434, action = clap::ArgAction::Set)]
+    quic_port_number: u16,
 }
 
 #[tokio::main(flavor = "multi_thread")]
@@ -28,6 +34,8 @@ async fn main() {
 
     let args = Args::parse();
     let replica = args.replica;
+    let quic_port_number = args.quic_port_number;
+    let web_port_number = args.web_port_number;
 
     let notify = Arc::new(Notify::new());
 
@@ -47,7 +55,7 @@ async fn main() {
     } else {
         let processor = processor.clone();
         spawn(async move {
-            let _res = start_quinn_client(processor).await;
+            let _res = start_quinn_client(processor, quic_port_number).await;
         })
     };
 
@@ -65,6 +73,7 @@ async fn main() {
         processor.clone(),
         contract_map.clone(),
         replica,
+        web_port_number,
     ));
 
     let _res = join!(

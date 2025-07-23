@@ -21,6 +21,7 @@ pub async fn web_task(
     processor: Arc<RwLock<Processor>>,
     contract_map: Arc<RwLock<HashMap<String, Plugin>>>,
     replica: bool,
+    web_port_number: u16,
 ) {
     let web_state = WebState {
         processor,
@@ -40,10 +41,7 @@ pub async fn web_task(
         .route("/get/chain-hash", get(chain_hash))
         .with_state(web_state);
 
-    let listener = if !replica {
-        tokio::net::TcpListener::bind("0.0.0.0:3000").await.unwrap()
-    } else {
-        tokio::net::TcpListener::bind("0.0.0.0:3001").await.unwrap()
-    };
+    let address = format!("0.0.0.0:{}", web_port_number);
+    let listener = tokio::net::TcpListener::bind(address).await.unwrap();
     axum::serve(listener, app).await.unwrap();
 }

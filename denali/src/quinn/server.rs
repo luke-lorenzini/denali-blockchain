@@ -1,7 +1,8 @@
 use std::{
     fs, io,
     net::{IpAddr, Ipv4Addr, SocketAddr},
-    sync::Arc, time::Duration,
+    sync::Arc,
+    time::Duration,
 };
 
 use anyhow::{Result, bail};
@@ -206,8 +207,7 @@ async fn handle_connection(
                     eprintln!("request failed: {e}");
                 }
             });
-        } 
-        else if &tag == b"UPDATE" {
+        } else if &tag == b"UPDATE" {
             // println!("Received UPDATE request");
             let proc = processor.clone();
             tokio::spawn(async move {
@@ -216,21 +216,20 @@ async fn handle_connection(
                     eprintln!("request failed: {e}");
                 }
             });
-        } 
-        else if &tag == b"NOTIFY" {
+        } else if &tag == b"NOTIFY" {
             println!("Received NOTIFY request");
             todo!()
-        } 
-        else {
+        } else {
             eprintln!("unrecognized stream type: {:?}", &tag);
         }
     }
 }
 
-async fn handle_update_request( (mut send, mut recv): (quinn::SendStream, quinn::RecvStream),
-    processor: Arc<RwLock<Processor>>,) -> Result<()> {
-
-        let req = recv
+async fn handle_update_request(
+    (mut send, mut recv): (quinn::SendStream, quinn::RecvStream),
+    processor: Arc<RwLock<Processor>>,
+) -> Result<()> {
+    let req = recv
         // .read_to_end(64 * 1024)
         .read_to_end(32)
         .await?;
@@ -242,19 +241,19 @@ async fn handle_update_request( (mut send, mut recv): (quinn::SendStream, quinn:
     // }
     // info!(content = %escaped);
 
-        // println!("{req:?}");
-        let mut xxx = vec![];
-        
-        if req.len() < 32 {
-            bail!("bad response rx'd")
-        }
-    for i in 0..=31 {
-        xxx.push(req[i]);
+    // println!("{req:?}");
+    let mut xxx = vec![];
+
+    if req.len() < 32 {
+        bail!("bad response rx'd")
+    }
+    for r in req.iter().take(32) {
+        xxx.push(*r);
     }
     // println!("{xxx:?}");
     let block_hash = match H256::try_from(xxx) {
         Ok(v) => v,
-        Err(_) => bail!("uh oh")
+        Err(_) => bail!("uh oh"),
     };
     let block_hash = Some(&block_hash);
     // let block_hash = Some(&block_hash);
@@ -313,14 +312,12 @@ async fn handle_syncro_request(
     match resp {
         Some(resp) => {
             // Write the response
-            send.write_all(&resp)
-                    .await
-                    ?;
+            send.write_all(&resp).await?;
         }
-        None => todo!()
+        None => todo!(),
     }
     // Gracefully terminate the stream
-        send.finish()?;
+    send.finish()?;
     info!("complete");
     Ok(())
 }
@@ -329,7 +326,7 @@ async fn process_get(
     // _root: &Path,
     _x: &[u8],
     processor: Arc<RwLock<Processor>>,
-    block_hash: Option<&H256>
+    block_hash: Option<&H256>,
 ) -> Result<Option<Vec<u8>>> {
     // dbg!(&x);
     // if x.len() < 4 || &x[0..4] != b"GET " {

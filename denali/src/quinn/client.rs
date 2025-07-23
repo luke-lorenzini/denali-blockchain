@@ -6,7 +6,8 @@ use std::{
     },
     net::{IpAddr, Ipv4Addr, SocketAddr, ToSocketAddrs},
     sync::Arc,
-    time::{Duration, 
+    time::{
+        Duration,
         // Instant
     },
 };
@@ -20,12 +21,12 @@ use rustls::pki_types::{
     // PrivateKeyDer,
     // PrivatePkcs8KeyDer
 };
-use tokio::sync::{RwLock, Notify};
+use tokio::sync::{Notify, RwLock};
 use url::Url;
 
 use crate::{processor::Processor, quinn::ALPN_QUIC_HTTP};
 
-pub async fn start_quinn_client(processor: Arc<RwLock<Processor>>) -> Result<()> {
+pub async fn start_quinn_client(processor: Arc<RwLock<Processor>>, port_number: u16) -> Result<()> {
     // Luke - start
     rustls::crypto::ring::default_provider()
         .install_default()
@@ -34,7 +35,7 @@ pub async fn start_quinn_client(processor: Arc<RwLock<Processor>>) -> Result<()>
 
     // luke - start
     // let url = options.url;
-    let url = "https://localhost:4433/test.txt";
+    let url = "https://localhost:4433";
     let url = Url::try_from(url).unwrap();
     // luke - end
     let url_host = strip_ipv6_brackets(url.host_str().unwrap());
@@ -75,7 +76,7 @@ pub async fn start_quinn_client(processor: Arc<RwLock<Processor>>) -> Result<()>
         quinn::ClientConfig::new(Arc::new(QuicClientConfig::try_from(client_crypto)?));
     // luke -start
     // let mut endpoint = quinn::Endpoint::client(options.bind)?;
-    let socket = SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), 4434);
+    let socket = SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), port_number);
     let mut endpoint = quinn::Endpoint::client(socket)?;
     // luke - end
     endpoint.set_default_client_config(client_config);
@@ -182,12 +183,18 @@ async fn _connect_to_server() -> Result<Connection> {
     let url_host = strip_ipv6_brackets(url.host_str().unwrap());
     let host = url_host;
     let endpoint = quinn::Endpoint::client(socket)?;
-    let remote = (url_host, url.port().unwrap_or(4433)).to_socket_addrs()?.next().unwrap();
+    let remote = (url_host, url.port().unwrap_or(4433))
+        .to_socket_addrs()?
+        .next()
+        .unwrap();
     let conn = endpoint.connect(remote, host)?.await?;
     Ok(conn)
 }
 
-async fn connect_and_listen(connection: Connection, processor: Arc<RwLock<Processor>>) -> Result<()> {
+async fn connect_and_listen(
+    connection: Connection,
+    processor: Arc<RwLock<Processor>>,
+) -> Result<()> {
     // let connection = connect_to_server().await?;
     let notify = Arc::new(Notify::new());
     // === Register for notifications
@@ -210,9 +217,7 @@ async fn connect_and_listen(connection: Connection, processor: Arc<RwLock<Proces
     let (mut send, mut recv) = connection.open_bi().await?;
     send.write_all(b"SYNCRO").await?;
     send.finish()?;
-    let resp = recv
-        .read_to_end(usize::MAX)
-        .await?;
+    let resp = recv.read_to_end(usize::MAX).await?;
     processor.write().await.chain.add_received_blocks(resp)?;
     // === Later, issue requests
     loop {
@@ -229,9 +234,7 @@ async fn connect_and_listen(connection: Connection, processor: Arc<RwLock<Proces
         send.write_all(b"UPDATE").await?;
         send.write_all(tip.as_ref()).await?;
         send.finish()?;
-        let resp = recv
-            .read_to_end(usize::MAX)
-            .await?;
+        let resp = recv.read_to_end(usize::MAX).await?;
         processor.write().await.chain.add_received_blocks(resp)?;
     }
     // Ok(())
