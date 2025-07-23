@@ -148,11 +148,7 @@ impl Thing for FakeProgram {
         "fake"
     }
 
-    async fn run(
-        &self,
-        payload: &str,
-        state: Arc<State>,
-    ) -> Result<(bool, Vec<String>)> {
+    async fn run(&self, payload: &str, state: Arc<State>) -> Result<(bool, Vec<String>)> {
         println!("run");
         println!("{payload:?}");
         println!("{state:?}");
