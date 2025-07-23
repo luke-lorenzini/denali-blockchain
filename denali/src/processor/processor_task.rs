@@ -37,7 +37,7 @@ pub async fn processor_task(
             .clone()
             .write()
             .await
-            .create_new_block(transactions, notify.clone())
+            .create_new_block(&transactions, notify.clone())
             .await;
     }
 }
