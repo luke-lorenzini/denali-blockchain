@@ -262,9 +262,12 @@ impl Chain {
                     block = self.blocks.get(&block.header.previous_block_hash).unwrap();
                     result.push(block);
                 }
-                // Add the genesis block.
-                block = self.blocks.get(&H256::zero()).unwrap();
-                result.push(block);
+                // Ensure we don't add the genisis block twice
+                if self.count != 1 {
+                    // Add the genesis block.
+                    block = self.blocks.get(&H256::zero()).unwrap();
+                    result.push(block);
+                }
             }
         }
         let reversed: Vec<&Block> = result.into_iter().rev().collect();
@@ -282,6 +285,17 @@ mod test {
         let chain = Chain::new(false);
         let res = chain.transmit_blocks(Some(&block_hash)).unwrap();
         assert!(res.is_none())
+    }
+
+    #[test]
+    fn test_transmit_block_gensis_only() {
+        let chain = Chain::new(false);
+        let res = chain.transmit_blocks(None).unwrap();
+        assert!(res.is_some());
+        let mut chain2 = Chain::new(true);
+        let res = chain2.add_received_blocks(res.unwrap());
+        assert!(res.is_ok());
+        assert_eq!(chain2.get_height(), 1)
     }
 
     #[test]
@@ -342,6 +356,7 @@ mod test {
             H256::try_from("34687aadf862bd776c8fc18b8e9f8e20088714856ff233b2802a591d0d5f2925")
                 .unwrap();
         host_chain.add_next_block(merkle_tree_root, HashMap::new(), None);
+        assert_eq!(host_chain.get_height(), 4);
 
         // Create a client chain.
         let mut client_chain = Chain::new(true);
@@ -353,6 +368,36 @@ mod test {
         assert!(res);
         // Genesis plus new blocks.
         assert_eq!(client_chain.count, 4);
+
+        let host_tip = host_chain.get_tip();
+        let client_tip = client_chain.get_tip();
+        assert_eq!(host_tip, client_tip);
+
+        let host_tip_hash = host_chain.get_block_hash();
+        let client_tip_hash = client_chain.get_block_hash();
+        assert_eq!(host_tip_hash, client_tip_hash);
+
+        let host_hash = host_chain.get_chain_hash().unwrap();
+        let client_hash = client_chain.get_chain_hash().unwrap();
+        assert_eq!(host_hash, client_hash)
+    }
+
+    #[test]
+    fn test_add_received_blocks_genesis_only() {
+        // Create a host chain with two additional blocks.
+        let host_chain = Chain::new(false);
+        assert_eq!(host_chain.get_height(), 1);
+
+        // Create a client chain.
+        let mut client_chain = Chain::new(true);
+        let encoded_block = host_chain.transmit_blocks(None).unwrap();
+        assert!(encoded_block.is_some());
+        let res = client_chain
+            .add_received_blocks(encoded_block.unwrap())
+            .unwrap();
+        assert!(res);
+        // Genesis plus new blocks.
+        assert_eq!(client_chain.count, 1);
 
         let host_tip = host_chain.get_tip();
         let client_tip = client_chain.get_tip();
