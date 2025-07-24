@@ -1,4 +1,4 @@
-use anyhow::Result;
+use anyhow::{Error, Result};
 use dashmap::DashMap;
 use log::trace;
 use rocksdb::{DB, Options};
@@ -11,6 +11,32 @@ impl Default for State {
     }
 }
 
+impl TryFrom<State> for Vec<(String, Vec<u8>)> {
+    type Error = Error;
+
+    fn try_from(value: State) -> Result<Self, Self::Error> {
+        let state: Vec<(_, _)> = value
+            .0
+            .iter()
+            .map(|k| (k.key().clone(), k.value().clone()))
+            .collect();
+        Ok(state)
+    }
+}
+
+impl TryFrom<Vec<(String, Vec<u8>)>> for State {
+    type Error = Error;
+
+    fn try_from(value: Vec<(String, Vec<u8>)>) -> Result<Self, Self::Error> {
+        let inner = DashMap::with_capacity(value.len());
+
+        value.into_iter().for_each(|(k, v)| {
+            inner.insert(k, v);
+        });
+        Ok(State(inner))
+    }
+}
+
 impl State {
     pub fn new() -> Self {
         let inner = DashMap::new();
@@ -19,6 +45,10 @@ impl State {
 
     fn _exists(&self, address: &str) -> bool {
         self.0.contains_key(address)
+    }
+
+    pub fn get_inner(&self) -> Self {
+        Self(self.0.clone())
     }
 
     pub fn get_value(&self, key: &str) -> Option<Vec<u8>> {

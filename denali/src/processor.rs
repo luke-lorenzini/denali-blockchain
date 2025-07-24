@@ -8,6 +8,7 @@ use tokio::sync::{Mutex, Notify};
 use crate::{
     chain::{Chain, Transaction},
     messaging::Meta,
+    quinn::client::quinn_one_shot_sync,
     types::{H256, Thing},
 };
 
@@ -27,8 +28,13 @@ pub struct Processor {
 }
 
 impl Processor {
-    pub fn new(replica: bool) -> Self {
-        let chain = Chain::new(replica);
+    pub async fn new(replica: bool, validator_restart: bool) -> Self {
+        let chain = if validator_restart {
+            let (encoded_state, encoded_blocks) = quinn_one_shot_sync(4435).await.unwrap();
+            Chain::new_restarted_validator(encoded_state, encoded_blocks).unwrap()
+        } else {
+            Chain::new(replica)
+        };
         Processor { chain }
     }
 
@@ -117,15 +123,15 @@ impl Processor {
 mod test {
     use super::*;
 
-    #[test]
-    fn test_new_chain_from_default() {
-        let processor = Processor::new(false);
+    #[tokio::test]
+    async fn test_new_chain_from_default() {
+        let processor = Processor::new(false, false).await;
         assert_eq!(processor.chain.get_height(), 1)
     }
 
-    #[test]
-    fn test_new_chain_get_height() {
-        let processor = Processor::new(false);
+    #[tokio::test]
+    async fn test_new_chain_get_height() {
+        let processor = Processor::new(false, false).await;
         assert_eq!(processor.get_height(), 1)
     }
 
@@ -158,7 +164,7 @@ mod test {
     #[tokio::test]
     async fn test_create_new_block() {
         let messages = vec![];
-        let mut processor = Processor::new(false);
+        let mut processor = Processor::new(false, false).await;
         let res = processor.create_new_block(messages, None).await.unwrap();
         let expected = true;
         assert_eq!(res, expected)

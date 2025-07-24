@@ -25,6 +25,9 @@ struct Args {
 
     #[clap(short, long, default_value_t = 4434, action = clap::ArgAction::Set)]
     quic_port_number: u16,
+
+    #[clap(short, long, default_value_t = false, action = clap::ArgAction::Set)]
+    validator_sync: bool,
 }
 
 #[tokio::main(flavor = "multi_thread")]
@@ -36,11 +39,12 @@ async fn main() {
     let replica = args.replica;
     let quic_port_number = args.quic_port_number;
     let web_port_number = args.web_port_number;
+    let validator_sync = args.validator_sync;
 
     let notify = Arc::new(Notify::new());
 
     let channel_size = 100;
-    let processor = Arc::new(RwLock::new(Processor::new(replica)));
+    let processor = Arc::new(RwLock::new(Processor::new(replica, validator_sync).await));
     let (tx, rx) = channel(channel_size);
     let (tx_msg_queue, rx_msg_queue) = channel(channel_size);
     let contract_map = Arc::new(RwLock::new(HashMap::new()));
