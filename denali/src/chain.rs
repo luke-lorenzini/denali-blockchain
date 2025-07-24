@@ -273,6 +273,21 @@ impl Chain {
         let reversed: Vec<&Block> = result.into_iter().rev().collect();
         Ok(Some(to_vec(&reversed)?))
     }
+
+    pub fn transmit_state(&self) -> Result<Vec<u8>> {
+        let state = self.state.clone();
+        let state = Arc::try_unwrap(state).unwrap();
+        let state: Vec<(String, Vec<u8>)> = state.try_into()?;
+        let encoded_state = to_vec(&state).unwrap();
+        // todo this should be encrypted
+        Ok(encoded_state)
+    }
+
+    pub fn receive_and_replace_state(encoded_state: Vec<u8>) -> Result<Arc<State>> {
+        let state: Vec<(String, Vec<u8>)> = from_slice(&encoded_state)?;
+        let state = state.try_into()?;
+        Ok(Arc::new(state))
+    }
 }
 
 #[cfg(test)]
