@@ -140,7 +140,6 @@ impl Chain {
         encoded_blocks: Vec<u8>,
     ) -> Result<Self> {
         let state = Chain::receive_and_replace_state(encoded_state).unwrap();
-        dbg!(&state);
         let blocks = HashMap::new();
         let count = blocks.len().try_into()?;
 
