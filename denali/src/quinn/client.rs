@@ -22,6 +22,67 @@ use url::Url;
 
 use crate::{processor::Processor, quinn::ALPN_QUIC_HTTP};
 
+// todo: clean me!
+pub async fn quinn_one_shot_sync(port_number: u16) -> Result<(Vec<u8>, Vec<u8>)> {
+    rustls::crypto::ring::default_provider()
+        .install_default()
+        .expect("Failed to install rustls crypto provider");
+
+    let url = "https://localhost:4433";
+    let url = Url::try_from(url).unwrap();
+    let url_host = strip_ipv6_brackets(url.host_str().unwrap());
+    let remote = (url_host, url.port().unwrap_or(4433))
+        .to_socket_addrs()?
+        .next()
+        .unwrap();
+
+    let mut roots = rustls::RootCertStore::empty();
+    {
+        let dirs = directories_next::ProjectDirs::from("org", "quinn", "quinn-examples").unwrap();
+        match fs::read(dirs.data_local_dir().join("cert.der")) {
+            Ok(cert) => {
+                roots.add(CertificateDer::from(cert))?;
+            }
+            Err(ref e) if e.kind() == io::ErrorKind::NotFound => {
+                info!("local server certificate not found");
+            }
+            Err(e) => {
+                error!("failed to open local server certificate: {e}");
+            }
+        }
+    }
+    let mut client_crypto = rustls::ClientConfig::builder()
+        .with_root_certificates(roots)
+        .with_no_client_auth();
+
+    client_crypto.alpn_protocols = ALPN_QUIC_HTTP.iter().map(|&x| x.into()).collect();
+
+    let client_config =
+        quinn::ClientConfig::new(Arc::new(QuicClientConfig::try_from(client_crypto)?));
+    let socket = SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), port_number);
+    let mut endpoint = quinn::Endpoint::client(socket)?;
+    endpoint.set_default_client_config(client_config);
+
+    let host = url_host;
+    let connection = endpoint.connect(remote, host)?.await?;
+
+    let (mut notify_send, _) = connection.open_bi().await?;
+    notify_send.write_all(b"NOTIFY").await?;
+    notify_send.finish()?;
+
+    let (mut send, mut recv) = connection.open_bi().await?;
+    send.write_all(b"VSYNCX").await?;
+    send.finish()?;
+    let encoded_state = recv.read_to_end(usize::MAX).await?;
+
+    let (mut send, mut recv) = connection.open_bi().await?;
+    send.write_all(b"SYNCRO").await?;
+    send.finish()?;
+    let encoded_blocks = recv.read_to_end(usize::MAX).await?;
+
+    Ok((encoded_state, encoded_blocks))
+}
+
 pub async fn start_quinn_client(processor: Arc<RwLock<Processor>>, port_number: u16) -> Result<()> {
     // Luke - start
     rustls::crypto::ring::default_provider()

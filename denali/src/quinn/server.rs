@@ -219,6 +219,13 @@ async fn handle_connection(
         } else if &tag == b"NOTIFY" {
             println!("Received NOTIFY request");
             todo!()
+        } else if &tag == b"VSYNCX" {
+            let proc = processor.clone();
+            tokio::spawn(async move {
+                if let Err(e) = handle_vsyncx_request(send, proc).await {
+                    eprintln!("request failed: {e}");
+                }
+            });
         } else {
             eprintln!("unrecognized stream type: {:?}", &tag);
         }
@@ -319,6 +326,16 @@ async fn handle_syncro_request(
     // Gracefully terminate the stream
     send.finish()?;
     info!("complete");
+    Ok(())
+}
+
+async fn handle_vsyncx_request(
+    mut send: quinn::SendStream,
+    processor: Arc<RwLock<Processor>>,
+) -> Result<()> {
+    let resp = processor.read().await.chain.transmit_state()?;
+    send.write_all(&resp).await?;
+    send.finish()?;
     Ok(())
 }
 

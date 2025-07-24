@@ -135,6 +135,25 @@ impl Chain {
         }
     }
 
+    pub fn new_restarted_validator(
+        encoded_state: Vec<u8>,
+        encoded_blocks: Vec<u8>,
+    ) -> Result<Self> {
+        let state = Chain::receive_and_replace_state(encoded_state).unwrap();
+        dbg!(&state);
+        let blocks = HashMap::new();
+        let count = blocks.len().try_into()?;
+
+        let mut chain = Self {
+            blocks,
+            count,
+            state,
+            tip: None,
+        };
+        chain.add_received_blocks(encoded_blocks)?;
+        Ok(chain)
+    }
+
     pub(crate) fn get_height(&self) -> u32 {
         self.count
     }
@@ -275,8 +294,7 @@ impl Chain {
     }
 
     pub fn transmit_state(&self) -> Result<Vec<u8>> {
-        let state = self.state.clone();
-        let state = Arc::try_unwrap(state).unwrap();
+        let state = self.state.get_inner();
         let state: Vec<(String, Vec<u8>)> = state.try_into()?;
         let encoded_state = to_vec(&state).unwrap();
         // todo this should be encrypted

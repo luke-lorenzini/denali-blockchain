@@ -47,6 +47,10 @@ impl State {
         self.0.contains_key(address)
     }
 
+    pub fn get_inner(&self) -> Self {
+        Self(self.0.clone())
+    }
+
     pub fn get_value(&self, key: &str) -> Option<Vec<u8>> {
         let value = self.0.get(key);
         match value {

@@ -13,7 +13,7 @@ use serde::Deserialize;
 
 #[tokio::test]
 async fn test_modify_single_value() {
-    let mut processor = Processor::new(false);
+    let mut processor = Processor::new(false, false).await;
     let mut transactions = Vec::new();
     let fake = Box::new(FakeProgram) as Box<dyn Thing>;
     let payload = r#"
@@ -37,7 +37,7 @@ async fn test_modify_single_value() {
 
 #[tokio::test]
 async fn test_add_one_block() {
-    let mut processor = Processor::new(false);
+    let mut processor = Processor::new(false, false).await;
     let mut transactions = Vec::new();
     let fake = Box::new(FakeProgram) as Box<dyn Thing>;
     let payload = r#"
@@ -64,7 +64,7 @@ async fn test_add_one_block() {
 
 #[tokio::test]
 async fn test_add_multiple_blocks() {
-    let mut processor = Processor::new(false);
+    let mut processor = Processor::new(false, false).await;
     let mut transactions = vec![];
     let fake = Box::new(FakeProgram) as Box<dyn Thing>;
 
