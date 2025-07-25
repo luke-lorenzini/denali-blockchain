@@ -1,7 +1,13 @@
 use anyhow::{Error, Result};
 use dashmap::DashMap;
 use log::trace;
-use rocksdb::{DB, Options};
+use rocksdb::{
+    DB,
+    // Options,
+    WaitForCompactOptions,
+};
+
+use crate::{constants::DB_PATH, types::H256};
 
 #[derive(Clone, Debug)]
 pub struct State(DashMap<String, Vec<u8>>);
@@ -63,8 +69,7 @@ impl State {
     }
 
     pub fn set_value(&self, key: &str, value: &[u8]) {
-        trace!("key: {key:?}");
-        // write_to_db(key, value);
+        trace!("key: {key:?}, value: {value:?}");
         trace!("before: {:?}", self.0);
         self.0.insert(key.into(), value.into());
         trace!("after: {:?}", self.0);
@@ -73,26 +78,26 @@ impl State {
     pub fn new_key_value() {}
 }
 
-fn _write_to_db(_key: &str, _value: u32) -> Result<()> {
-    // Start: RocksDB
+pub fn write_to_db(key: &H256, value: String) -> Result<()> {
     // NB: db is automatically closed at end of lifetime
-    let tempdir = tempfile::Builder::new()
-        .prefix("_path_for_rocksdb_storage")
-        .tempdir()
-        .expect("Failed to create temporary path for the _path_for_rocksdb_storage");
-    let path = tempdir.path();
+    // let tempdir = tempfile::Builder::new()
+    //     .prefix("_path_for_rocksdb_storage")
+    //     .tempdir()
+    //     .expect("Failed to create temporary path for the _path_for_rocksdb_storage");
+    // let path = tempdir.path();
     {
-        let db = DB::open_default(path)?;
-        db.put(b"my key", b"my value")?;
-        match db.get(b"my key") {
-            Ok(Some(value)) => println!("retrieved value {}", String::from_utf8(value)?),
-            Ok(None) => println!("value not found"),
-            Err(e) => println!("operational problem encountered: {e}"),
-        }
-        db.delete(b"my key")?;
+        let db = DB::open_default(DB_PATH)?;
+        db.put(key.as_ref(), value)?;
+        // match db.get(key) {
+        //     Ok(Some(value)) => println!("retrieved value {value:?}"),
+        //     Ok(None) => println!("value not found"),
+        //     Err(e) => println!("operational problem encountered: {e}"),
+        // }
+        // db.delete(b"my key")?;
+        // is this necessary?
+        DB::wait_for_compact(&db, &WaitForCompactOptions::default())?;
     }
-    let _ = DB::destroy(&Options::default(), path);
-    // End: RocksDB
+    // DB::destroy(&Options::default(), path)?;
 
     Ok(())
 }

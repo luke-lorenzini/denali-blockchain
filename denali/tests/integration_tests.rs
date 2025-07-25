@@ -29,7 +29,7 @@ async fn test_modify_single_value() {
     };
     transactions.push(message);
     processor
-        .create_new_block(transactions, None)
+        .create_new_block(&transactions, None)
         .await
         .unwrap();
 }
@@ -52,7 +52,7 @@ async fn test_add_one_block() {
     };
     transactions.push(message);
     processor
-        .create_new_block(transactions, None)
+        .create_new_block(&transactions, None)
         .await
         .unwrap();
     let res = processor.get_height();
@@ -79,7 +79,7 @@ async fn test_add_multiple_blocks() {
     };
     transactions.push(message);
     processor
-        .create_new_block(transactions, None)
+        .create_new_block(&transactions, None)
         .await
         .unwrap();
     let mut transactions = vec![];
@@ -97,7 +97,7 @@ async fn test_add_multiple_blocks() {
     };
     transactions.push(message);
     processor
-        .create_new_block(transactions, None)
+        .create_new_block(&transactions, None)
         .await
         .unwrap();
     let mut transactions = vec![];
@@ -115,7 +115,7 @@ async fn test_add_multiple_blocks() {
     };
     transactions.push(message);
     processor
-        .create_new_block(transactions, None)
+        .create_new_block(&transactions, None)
         .await
         .unwrap();
 

@@ -9,6 +9,7 @@ use crate::{
     chain::{Chain, Transaction},
     messaging::Meta,
     quinn::client::quinn_one_shot_sync,
+    // storage::write_to_db,
     types::{H256, Thing},
 };
 
@@ -65,7 +66,7 @@ impl Processor {
 
     async fn process_transactions(
         &self,
-        transactions: Vec<Message<Box<dyn Thing + Send + Sync>>>,
+        transactions: &Vec<Message<Box<dyn Thing + Send + Sync>>>,
         transactions_map: Arc<Mutex<HashMap<H256, Transaction>>>,
     ) -> Result<Vec<H256>> {
         // fn process_transactions<T: Thing>(&self, transactions: Vec<Message<T>>) -> H256 {
@@ -73,12 +74,12 @@ impl Processor {
         for transaction in transactions {
             // 'tx' that gets written into the tx log should be based on tx details. This needs to be determined before it's processed, deterministically.
             // let tx = self.process_transaction(&transaction).await.unwrap();
-            let tx = self.parse(&transaction).await?;
+            let tx = self.parse(transaction).await?;
             transactions_map.lock().await.insert(
                 transaction.tx_id,
                 Transaction {
-                    tx: transaction.payload,
-                    _metadata: transaction.metadata,
+                    tx: transaction.payload.clone(),
+                    _metadata: transaction.metadata.clone(),
                     _logs: tx.1,
                 },
             );
@@ -94,7 +95,7 @@ impl Processor {
     // Process a batch of transactions
     pub async fn create_new_block(
         &mut self,
-        messages: Vec<Message<Box<dyn Thing + Send + Sync>>>,
+        messages: &Vec<Message<Box<dyn Thing + Send + Sync>>>,
         notify: Option<Arc<Notify>>,
     ) -> Result<()> {
         // pub fn create_new_block<T: Thing>(&mut self, messages: Vec<Message<T>>) -> bool {
@@ -112,6 +113,13 @@ impl Processor {
         let block_transactions = Arc::try_unwrap(transactions).unwrap().into_inner();
         self.chain
             .add_next_block(merkle_tree_root.try_into()?, block_transactions, notify)?;
+
+        // for message in messages {
+        //     let xxx = message.tx_id;
+        //     let yyy = message.payload.clone();
+        //     write_to_db(&xxx, yyy)?;
+        // }
+
         Ok(())
     }
 }
@@ -162,6 +170,6 @@ mod test {
     async fn test_create_new_block() {
         let messages = vec![];
         let mut processor = Processor::new(false, false).await.unwrap();
-        processor.create_new_block(messages, None).await.unwrap();
+        processor.create_new_block(&messages, None).await.unwrap();
     }
 }
