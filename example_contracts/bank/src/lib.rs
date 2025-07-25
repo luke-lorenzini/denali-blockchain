@@ -1,6 +1,6 @@
 use std::{collections::HashMap, sync::Arc};
 
-use anyhow::Result;
+use anyhow::{Result, anyhow};
 use async_trait::async_trait;
 use denali::{storage::State, types::Thing};
 use macros::generate_create_thing;
@@ -20,8 +20,8 @@ impl Thing for Bank {
         "bank"
     }
 
-    fn version(&self) -> Version {
-        Version::parse("0.1.0").unwrap()
+    fn version(&self) -> Result<Version> {
+        Version::parse("0.1.0").map_err(|e| anyhow!("Semver failure: {e}"))
     }
 
     async fn run(&self, payload: &str, _state: Arc<State>) -> Result<(bool, Vec<String>)> {
@@ -118,8 +118,5 @@ mod test {
     }
 
     #[test]
-    fn test_run() {
-        // let (bank, payload) = setup();
-        // let _res = bank.run(&payload).unwrap();
-    }
+    fn test_run() {}
 }

@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use anyhow::Result;
+use anyhow::{Result, anyhow};
 use async_trait::async_trait;
 use borsh::{BorshDeserialize, BorshSerialize, from_slice, to_vec};
 use denali::{storage::State, types::Thing};
@@ -22,8 +22,8 @@ impl Thing for Vote {
         "vote"
     }
 
-    fn version(&self) -> Version {
-        Version::parse("0.1.0").unwrap()
+    fn version(&self) -> Result<Version> {
+        Version::parse("0.1.0").map_err(|e| anyhow!("Semver failure: {e}"))
     }
 
     async fn run(&self, payload: &str, state: Arc<State>) -> Result<(bool, Vec<String>)> {
@@ -67,7 +67,7 @@ async fn vote_program(payload: &str, state: Arc<State>) -> Result<Vec<String>> {
     let locked_state = state;
     let current_state = match locked_state.get_value("vote") {
         Some(value) => {
-            let mut current_state = from_slice::<ContractData>(value.as_ref()).unwrap();
+            let mut current_state = from_slice::<ContractData>(value.as_ref())?;
             let idx = if payload.candidate == "0" {
                 0
             } else if payload.candidate == "1" {
@@ -83,7 +83,7 @@ async fn vote_program(payload: &str, state: Arc<State>) -> Result<Vec<String>> {
         },
     };
     trace!("current_state: {current_state:?}");
-    let encoded_state = to_vec(&current_state).unwrap();
+    let encoded_state = to_vec(&current_state)?;
     locked_state.set_value("vote", &encoded_state);
 
     Ok(vec![])
@@ -124,8 +124,5 @@ mod test {
     }
 
     #[test]
-    fn test_run() {
-        // let (vote, payload) = setup();
-        // let _res = vote.run(&payload).unwrap();
-    }
+    fn test_run() {}
 }

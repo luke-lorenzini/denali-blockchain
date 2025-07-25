@@ -1,6 +1,6 @@
 use std::{collections::HashMap, sync::Arc};
 
-use anyhow::{Result, bail};
+use anyhow::{Result, anyhow, bail};
 use borsh::{BorshDeserialize, BorshSerialize, from_slice, to_vec};
 use chrono::Utc;
 use hex::encode;
@@ -56,11 +56,12 @@ impl Header {
         .concat()
     }
 
-    fn calc_hash(&self) -> H256 {
+    fn calc_hash(&self) -> Result<H256> {
         let mut hasher = Sha256::new();
         hasher.update(self.to_bytes());
         let res = hasher.finalize();
-        encode(res).try_into().unwrap()
+        let x = encode(res).try_into()?;
+        Ok(x)
     }
 }
 
@@ -83,18 +84,18 @@ impl Block {
         previous_block_hash: H256,
         merkle_tree_root: H256,
         transactions: HashMap<H256, Transaction>,
-    ) -> Self {
+    ) -> Result<Self> {
         // Each block contains:
         // all transactions,
         // transaction metadata,
         // logs emitted by each transaction.
         let header = Header::new(previous_block_hash, merkle_tree_root);
-        let block_hash = header.calc_hash();
-        Self {
+        let block_hash = header.calc_hash()?;
+        Ok(Self {
             block_hash,
             header,
             transactions,
-        }
+        })
     }
 
     fn genesis() -> Self {
@@ -116,7 +117,7 @@ pub struct Chain {
 }
 
 impl Chain {
-    pub(crate) fn new(replica: bool) -> Self {
+    pub(crate) fn new(replica: bool) -> Result<Self> {
         let mut blocks = HashMap::new();
         let state = Arc::new(State::new());
         let tip = if replica {
@@ -127,19 +128,19 @@ impl Chain {
             blocks.insert(tip, genesis);
             Some(tip)
         };
-        Self {
-            count: blocks.len().try_into().unwrap(),
+        Ok(Self {
+            count: blocks.len().try_into()?,
             blocks,
             state,
             tip,
-        }
+        })
     }
 
     pub fn new_restarted_validator(
         encoded_state: Vec<u8>,
         encoded_blocks: Vec<u8>,
     ) -> Result<Self> {
-        let state = Chain::receive_and_replace_state(encoded_state).unwrap();
+        let state = Chain::receive_and_replace_state(encoded_state)?;
         let blocks = HashMap::new();
         let count = blocks.len().try_into()?;
 
@@ -157,8 +158,8 @@ impl Chain {
         self.count
     }
 
-    pub(crate) fn get_tip(&self) -> H256 {
-        self.tip.unwrap()
+    pub(crate) fn get_tip(&self) -> Result<H256> {
+        self.tip.ok_or_else(|| anyhow!("Cannot act on empty chain"))
     }
 
     pub(crate) fn add_next_block(
@@ -166,11 +167,11 @@ impl Chain {
         merkle_tree_root: H256,
         transactions: HashMap<H256, Transaction>,
         notify: Option<Arc<Notify>>,
-    ) -> bool {
-        let block = Block::new(self.get_block_hash(), merkle_tree_root, transactions);
+    ) -> Result<()> {
+        let block = Block::new(self.get_block_hash(), merkle_tree_root, transactions)?;
         trace!("add_next_block block: {block:?}");
         self.tip = Some(block.block_hash);
-        self.blocks.insert(self.tip.unwrap(), block);
+        self.blocks.insert(self.get_tip()?, block);
         self.count += 1;
 
         // notify
@@ -178,7 +179,7 @@ impl Chain {
             notify.notify_one();
         }
 
-        true
+        Ok(())
     }
 
     pub fn add_received_blocks(&mut self, encoded_blocks: Vec<u8>) -> Result<bool> {
@@ -186,7 +187,7 @@ impl Chain {
         for decoded_block in decoded_blocks {
             trace!("add_received_blocks block: {decoded_block:?}");
             self.tip = Some(decoded_block.block_hash);
-            self.blocks.insert(self.tip.unwrap(), decoded_block);
+            self.blocks.insert(self.get_tip()?, decoded_block);
             self.count += 1;
         }
         Ok(true)
@@ -214,7 +215,7 @@ impl Chain {
     }
 
     pub fn get_chain(&self) -> Vec<H256> {
-        let mut current = self.tip.unwrap();
+        let mut current = self.get_tip().unwrap();
         let mut res = vec![current];
         println!("tip: {:?}", String::from(self.tip.unwrap()));
 
@@ -248,7 +249,7 @@ impl Chain {
         let mut hasher = Sha256::new();
         hasher.update(res);
         let res = hasher.finalize();
-        let result = encode(res).try_into().unwrap();
+        let result = encode(res).try_into()?;
         trace!("{result:?}");
         Ok(result)
     }
@@ -295,7 +296,7 @@ impl Chain {
     pub fn transmit_state(&self) -> Result<Vec<u8>> {
         let state = self.state.get_inner();
         let state: Vec<(String, Vec<u8>)> = state.try_into()?;
-        let encoded_state = to_vec(&state).unwrap();
+        let encoded_state = to_vec(&state)?;
         // todo this should be encrypted
         Ok(encoded_state)
     }
@@ -314,17 +315,17 @@ mod test {
     #[test]
     fn test_transmit_block_at_same_point() {
         let block_hash = H256::zero();
-        let chain = Chain::new(false);
+        let chain = Chain::new(false).unwrap();
         let res = chain.transmit_blocks(Some(&block_hash)).unwrap();
         assert!(res.is_none())
     }
 
     #[test]
     fn test_transmit_block_gensis_only() {
-        let chain = Chain::new(false);
+        let chain = Chain::new(false).unwrap();
         let res = chain.transmit_blocks(None).unwrap();
         assert!(res.is_some());
-        let mut chain2 = Chain::new(true);
+        let mut chain2 = Chain::new(true).unwrap();
         let res = chain2.add_received_blocks(res.unwrap());
         assert!(res.is_ok());
         assert_eq!(chain2.get_height(), 1)
@@ -335,22 +336,26 @@ mod test {
         let block_hash =
             H256::try_from("66687aadf862bd776c8fc18b8e9f8e20089714856ee233b3902a591d0d5f2925")
                 .unwrap();
-        let chain = Chain::new(false);
+        let chain = Chain::new(false).unwrap();
         let res = chain.transmit_blocks(Some(&block_hash));
         assert!(res.is_err())
     }
 
     #[test]
     fn test_transmit_block_has_genesis() {
-        let mut chain = Chain::new(false);
+        let mut chain = Chain::new(false).unwrap();
         let merkle_tree_root =
             H256::try_from("66687aadf862bd776c8fc18b8e9f8e20089714856ee233b3902a591d0d5f2925")
                 .unwrap();
-        chain.add_next_block(merkle_tree_root, HashMap::new(), None);
+        chain
+            .add_next_block(merkle_tree_root, HashMap::new(), None)
+            .unwrap();
         let merkle_tree_root =
             H256::try_from("45687aadf862bd776c8fc18b8e9f8e20099714856ff233b3902a591d0d5f2925")
                 .unwrap();
-        chain.add_next_block(merkle_tree_root, HashMap::new(), None);
+        chain
+            .add_next_block(merkle_tree_root, HashMap::new(), None)
+            .unwrap();
         let res = chain.transmit_blocks(Some(&H256::zero())).unwrap().unwrap();
         let decoded_chain: Vec<Block> = from_slice(&res).unwrap();
         assert_eq!(decoded_chain.len(), 2);
@@ -358,15 +363,19 @@ mod test {
 
     #[test]
     fn test_transmit_block_from_scratch() {
-        let mut chain = Chain::new(false);
+        let mut chain = Chain::new(false).unwrap();
         let merkle_tree_root =
             H256::try_from("66687aadf862bd776c8fc18b8e9f8e20089714856ee233b3902a591d0d5f2925")
                 .unwrap();
-        chain.add_next_block(merkle_tree_root, HashMap::new(), None);
+        chain
+            .add_next_block(merkle_tree_root, HashMap::new(), None)
+            .unwrap();
         let merkle_tree_root =
             H256::try_from("45687aadf862bd776c8fc18b8e9f8e20099714856ff233b3902a591d0d5f2925")
                 .unwrap();
-        chain.add_next_block(merkle_tree_root, HashMap::new(), None);
+        chain
+            .add_next_block(merkle_tree_root, HashMap::new(), None)
+            .unwrap();
         let res = chain.transmit_blocks(None).unwrap().unwrap();
         let decoded_chain: Vec<Block> = from_slice(&res).unwrap();
         assert_eq!(decoded_chain.len(), 3);
@@ -375,23 +384,29 @@ mod test {
     #[test]
     fn test_add_received_blocks() {
         // Create a host chain with two additional blocks.
-        let mut host_chain = Chain::new(false);
+        let mut host_chain = Chain::new(false).unwrap();
         let merkle_tree_root =
             H256::try_from("66687aadf862bd776c8fc18b8e9f8e20089714856ee233b3902a591d0d5f2925")
                 .unwrap();
-        host_chain.add_next_block(merkle_tree_root, HashMap::new(), None);
+        host_chain
+            .add_next_block(merkle_tree_root, HashMap::new(), None)
+            .unwrap();
         let merkle_tree_root =
             H256::try_from("45687aadf862bd776c8fc18b8e9f8e20099714856ff233b3902a591d0d5f2925")
                 .unwrap();
-        host_chain.add_next_block(merkle_tree_root, HashMap::new(), None);
+        host_chain
+            .add_next_block(merkle_tree_root, HashMap::new(), None)
+            .unwrap();
         let merkle_tree_root =
             H256::try_from("34687aadf862bd776c8fc18b8e9f8e20088714856ff233b2802a591d0d5f2925")
                 .unwrap();
-        host_chain.add_next_block(merkle_tree_root, HashMap::new(), None);
+        host_chain
+            .add_next_block(merkle_tree_root, HashMap::new(), None)
+            .unwrap();
         assert_eq!(host_chain.get_height(), 4);
 
         // Create a client chain.
-        let mut client_chain = Chain::new(true);
+        let mut client_chain = Chain::new(true).unwrap();
         let encoded_block = host_chain.transmit_blocks(None).unwrap();
         assert!(encoded_block.is_some());
         let res = client_chain
@@ -401,8 +416,8 @@ mod test {
         // Genesis plus new blocks.
         assert_eq!(client_chain.count, 4);
 
-        let host_tip = host_chain.get_tip();
-        let client_tip = client_chain.get_tip();
+        let host_tip = host_chain.get_tip().unwrap();
+        let client_tip = client_chain.get_tip().unwrap();
         assert_eq!(host_tip, client_tip);
 
         let host_tip_hash = host_chain.get_block_hash();
@@ -417,11 +432,11 @@ mod test {
     #[test]
     fn test_add_received_blocks_genesis_only() {
         // Create a host chain with two additional blocks.
-        let host_chain = Chain::new(false);
+        let host_chain = Chain::new(false).unwrap();
         assert_eq!(host_chain.get_height(), 1);
 
         // Create a client chain.
-        let mut client_chain = Chain::new(true);
+        let mut client_chain = Chain::new(true).unwrap();
         let encoded_block = host_chain.transmit_blocks(None).unwrap();
         assert!(encoded_block.is_some());
         let res = client_chain
@@ -431,8 +446,8 @@ mod test {
         // Genesis plus new blocks.
         assert_eq!(client_chain.count, 1);
 
-        let host_tip = host_chain.get_tip();
-        let client_tip = client_chain.get_tip();
+        let host_tip = host_chain.get_tip().unwrap();
+        let client_tip = client_chain.get_tip().unwrap();
         assert_eq!(host_tip, client_tip);
 
         let host_tip_hash = host_chain.get_block_hash();
@@ -459,30 +474,30 @@ mod test {
 
     #[test]
     fn test_new_chain() {
-        let chain = Chain::new(false);
+        let chain = Chain::new(false).unwrap();
         let expected = 1;
         assert_eq!(chain.get_height(), expected)
     }
 
     #[test]
     fn test_new_chain_from_default() {
-        let chain = Chain::new(false);
+        let chain = Chain::new(false).unwrap();
         let expected = 1;
         assert_eq!(chain.count, expected)
     }
 
     #[test]
     fn test_new_chain_block() {
-        let res = Block::new(H256::zero(), H256::zero(), HashMap::default());
+        let res = Block::new(H256::zero(), H256::zero(), HashMap::default()).unwrap();
         assert_eq!(res.header.version, 0);
         assert_eq!(res.header.previous_block_hash, H256::zero())
     }
 
     #[test]
     fn test_get_chain_hash() {
-        let server_chain = Chain::new(false);
+        let server_chain = Chain::new(false).unwrap();
         let server_hash = server_chain.get_chain_hash().unwrap();
-        let mut client_chain = Chain::new(true);
+        let mut client_chain = Chain::new(true).unwrap();
         let encoded_blocks = server_chain.transmit_blocks(None).unwrap().unwrap();
         let _ = client_chain.add_received_blocks(encoded_blocks);
         let client_hash = client_chain.get_chain_hash().unwrap();
@@ -493,7 +508,7 @@ mod test {
     #[test]
     fn test_calc_hash() {
         let header = Header::new(H256::zero(), H256::zero());
-        let res = header.calc_hash();
+        let res = header.calc_hash().unwrap();
         let expected = H256::new([
             222, 71, 201, 178, 126, 184, 211, 0, 219, 181, 242, 195, 83, 230, 50, 195, 147, 38, 44,
             240, 99, 64, 196, 250, 127, 27, 64, 196, 203, 211, 111, 144,
@@ -503,17 +518,17 @@ mod test {
 
     #[test]
     fn test_add_next_block() {
-        let mut chain = Chain::new(false);
-        let res = chain.add_next_block(H256::zero(), HashMap::new(), None);
-        let expected = true;
-        assert_eq!(res, expected);
+        let mut chain = Chain::new(false).unwrap();
+        chain
+            .add_next_block(H256::zero(), HashMap::new(), None)
+            .unwrap();
         assert_eq!(chain.count, 2)
     }
 
     #[ignore = "mock sys time"]
     #[test]
     fn test_get_block_hash() {
-        let chain = Chain::new(false);
+        let chain = Chain::new(false).unwrap();
         let res = chain.get_block_hash().to_owned();
         let expected = H256::new([
             222, 71, 201, 178, 126, 184, 211, 0, 219, 181, 242, 195, 83, 230, 50, 195, 147, 38, 44,

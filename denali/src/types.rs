@@ -3,7 +3,7 @@ use std::{
     sync::Arc,
 };
 
-use anyhow::Result;
+use anyhow::{Error, Result, anyhow, bail};
 use async_trait::async_trait;
 use borsh::{BorshDeserialize, BorshSerialize};
 use derive_more::AsRef;
@@ -55,23 +55,25 @@ impl Display for H256 {
 }
 
 impl TryFrom<String> for H256 {
-    type Error = &'static str;
+    type Error = Error;
 
     fn try_from(value: String) -> Result<Self, Self::Error> {
-        let decoded = decode(value).map_err(|_e| "Failed to decode")?;
-        let inner: [u8; 32] = decoded.try_into().map_err(|_e| "Failed to convert")?;
+        let decoded = decode(value)?;
+        let inner = decoded
+            .try_into()
+            .map_err(|e| anyhow!("decode failed: {e:?}"))?;
         Ok(Self(inner))
     }
 }
 
 impl TryFrom<Vec<u8>> for H256 {
-    type Error = &'static str;
+    type Error = Error;
 
     fn try_from(value: Vec<u8>) -> Result<Self, Self::Error> {
         if value.len() == 32 {
             Ok(H256::new(value.try_into().expect("Already checked")))
         } else {
-            Err("Value is not correct length")
+            bail!("Invalid length")
         }
     }
 }
@@ -83,13 +85,12 @@ impl From<H256> for String {
 }
 
 impl TryFrom<&str> for H256 {
-    type Error = &'static str;
+    type Error = Error;
 
     fn try_from(value: &str) -> Result<Self, Self::Error> {
-        let inner: [u8; 32] = decode(value)
-            .unwrap()
+        let inner: [u8; 32] = decode(value)?
             .try_into()
-            .map_err(|_e| "Failed to decode")?;
+            .map_err(|e| anyhow!("Failed to decode {e:?}"))?;
         Ok(Self(inner))
     }
 }
@@ -97,7 +98,7 @@ impl TryFrom<&str> for H256 {
 #[async_trait]
 pub trait Thing: Send + Sync + ThingClone {
     fn name(&self) -> &'static str;
-    fn version(&self) -> Version;
+    fn version(&self) -> Result<Version>;
     fn verify(&self) -> Result<bool>;
     async fn run(&self, payload: &str, state: Arc<State>) -> Result<(bool, Vec<String>)>;
 }

@@ -1,5 +1,6 @@
 use std::{collections::HashMap, sync::Arc};
 
+use anyhow::{Ok, Result};
 use clap::Parser;
 use denali::{
     constants::PATH,
@@ -31,7 +32,7 @@ struct Args {
 }
 
 #[tokio::main(flavor = "multi_thread")]
-async fn main() {
+async fn main() -> Result<()> {
     // #[cfg(feature = "console")]
     // console_subscriber::init();
 
@@ -44,7 +45,7 @@ async fn main() {
     let notify = Arc::new(Notify::new());
 
     let channel_size = 100;
-    let processor = Arc::new(RwLock::new(Processor::new(replica, validator_sync).await));
+    let processor = Arc::new(RwLock::new(Processor::new(replica, validator_sync).await?));
     let (tx, rx) = channel(channel_size);
     let (tx_msg_queue, rx_msg_queue) = channel(channel_size);
     let contract_map = Arc::new(RwLock::new(HashMap::new()));
@@ -98,6 +99,8 @@ async fn main() {
     // if let Err(e) = handle.await {
     //     eprintln!("Task failed: {:?}", e);
     // }
+
+    Ok(())
 }
 
 // pub fn spawn_all_tasks(

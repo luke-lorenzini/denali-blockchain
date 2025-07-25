@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use anyhow::Result;
+use anyhow::{Result, anyhow};
 use async_trait::async_trait;
 use denali::{storage::State, types::Thing};
 use macros::generate_create_thing;
@@ -16,8 +16,8 @@ impl Thing for HelloWorld {
         "hello-world"
     }
 
-    fn version(&self) -> Version {
-        Version::parse("0.1.0").unwrap()
+    fn version(&self) -> Result<Version> {
+        Version::parse("0.1.0").map_err(|e| anyhow!("Semver failure: {e}"))
     }
 
     async fn run(&self, payload: &str, state: Arc<State>) -> Result<(bool, Vec<String>)> {

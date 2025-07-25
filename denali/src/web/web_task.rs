@@ -1,5 +1,6 @@
 use std::{collections::HashMap, sync::Arc};
 
+use anyhow::{Ok, Result};
 use axum::{
     // http::StatusCode,
     // Json,
@@ -22,7 +23,7 @@ pub async fn web_task(
     contract_map: Arc<RwLock<HashMap<String, Plugin>>>,
     replica: bool,
     web_port_number: u16,
-) {
+) -> Result<()> {
     let web_state = WebState {
         processor,
         tx,
@@ -42,6 +43,8 @@ pub async fn web_task(
         .with_state(web_state);
 
     let address = format!("0.0.0.0:{web_port_number}");
-    let listener = tokio::net::TcpListener::bind(address).await.unwrap();
-    axum::serve(listener, app).await.unwrap();
+    let listener = tokio::net::TcpListener::bind(address).await?;
+    axum::serve(listener, app).await?;
+
+    Ok(())
 }

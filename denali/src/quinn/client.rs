@@ -29,7 +29,7 @@ pub async fn quinn_one_shot_sync(port_number: u16) -> Result<(Vec<u8>, Vec<u8>)>
         .expect("Failed to install rustls crypto provider");
 
     let url = "https://localhost:4433";
-    let url = Url::try_from(url).unwrap();
+    let url = Url::try_from(url)?;
     let url_host = strip_ipv6_brackets(url.host_str().unwrap());
     let remote = (url_host, url.port().unwrap_or(4433))
         .to_socket_addrs()?
@@ -93,7 +93,7 @@ pub async fn start_quinn_client(processor: Arc<RwLock<Processor>>, port_number: 
     // luke - start
     // let url = options.url;
     let url = "https://localhost:4433";
-    let url = Url::try_from(url).unwrap();
+    let url = Url::try_from(url)?;
     // luke - end
     let url_host = strip_ipv6_brackets(url.host_str().unwrap());
     let remote = (url_host, url.port().unwrap_or(4433))
@@ -289,7 +289,7 @@ async fn connect_and_listen(
         // let payload = format!("UPDATE{}", tip);
         // println!("{payload:?}");
         send.write_all(b"UPDATE").await?;
-        send.write_all(tip.as_ref()).await?;
+        send.write_all(tip.unwrap().as_ref()).await?;
         send.finish()?;
         let resp = recv.read_to_end(usize::MAX).await?;
         processor.write().await.chain.add_received_blocks(resp)?;
