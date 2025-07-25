@@ -75,12 +75,12 @@ pub async fn start_quinn_server(
         let (cert, key) = match fs::read(&cert_path).and_then(|x| Ok((x, fs::read(&key_path)?))) {
             Ok((cert, key)) => (
                 CertificateDer::from(cert),
-                PrivateKeyDer::try_from(key).unwrap()
-                // .map_err(anyhow::Error::msg)?,
+                PrivateKeyDer::try_from(key)
+                .map_err(anyhow::Error::msg)?,
             ),
             Err(ref e) if e.kind() == io::ErrorKind::NotFound => {
                 info!("generating self-signed certificate");
-                let _cert = rcgen::generate_simple_self_signed(vec!["localhost".into()]).unwrap();
+                let _cert = rcgen::generate_simple_self_signed(vec!["localhost".into()])?;
                 // let key = PrivatePkcs8KeyDer::from(cert.signing_key.serialize_der());
                 // let cert = cert.cert.into();
                 fs::create_dir_all(path)
@@ -116,7 +116,7 @@ pub async fn start_quinn_server(
     let transport_config = Arc::get_mut(&mut server_config.transport).unwrap();
     transport_config.max_concurrent_uni_streams(0_u8.into());
     transport_config.keep_alive_interval(Some(Duration::from_secs(10)));
-    transport_config.max_idle_timeout(Some(Duration::from_secs(300).try_into().unwrap()));
+    transport_config.max_idle_timeout(Some(Duration::from_secs(300).try_into()?));
 
     // Luke - Start
     // let root = Arc::<Path>::from(options.root.clone());
@@ -274,7 +274,7 @@ async fn handle_update_request(
         //     error!("failed: {}", e);
         //     format!("failed to process request: {e}\n").into_bytes()
         // })
-        .unwrap();
+        ?;
 
     if let Some(resp) = resp {
         // Write the response
@@ -314,7 +314,7 @@ async fn handle_syncro_request(
         //     error!("failed: {}", e);
         //     format!("failed to process request: {e}\n").into_bytes()
         // })
-        .unwrap();
+        ?;
 
     match resp {
         Some(resp) => {

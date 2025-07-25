@@ -84,7 +84,7 @@ pub async fn receiver_task(
         hasher.update(&i.payload);
         // hasher.update(i.metadata);
         let res = hasher.finalize();
-        let tx_id: H256 = encode(res).try_into().unwrap();
+        let tx_id: H256 = encode(res).try_into()?;
         trace!("tx hash: {tx_id:?}");
         let ack = ResponseRx {
             status: true,
