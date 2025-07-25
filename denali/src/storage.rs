@@ -2,8 +2,9 @@ use anyhow::{Error, Result};
 use dashmap::DashMap;
 use log::trace;
 use rocksdb::{
-    // Options, 
-    WaitForCompactOptions, DB
+    DB,
+    // Options,
+    WaitForCompactOptions,
 };
 
 use crate::{constants::DB_PATH, types::H256};
@@ -93,7 +94,7 @@ pub fn write_to_db(key: &H256, value: String) -> Result<()> {
         //     Err(e) => println!("operational problem encountered: {e}"),
         // }
         // db.delete(b"my key")?;
-        // is this necessary? 
+        // is this necessary?
         DB::wait_for_compact(&db, &WaitForCompactOptions::default())?;
     }
     // DB::destroy(&Options::default(), path)?;

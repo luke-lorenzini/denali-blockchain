@@ -112,13 +112,13 @@ impl Processor {
         let block_transactions = Arc::try_unwrap(transactions).unwrap().into_inner();
         self.chain
             .add_next_block(merkle_tree_root.try_into()?, block_transactions, notify)?;
-        
+
         // for message in messages {
         //     let xxx = message.tx_id;
         //     let yyy = message.payload.clone();
         //     write_to_db(&xxx, yyy)?;
         // }
-        
+
         Ok(())
     }
 }
@@ -169,6 +169,6 @@ mod test {
     async fn test_create_new_block() {
         let messages = vec![];
         let mut processor = Processor::new(false, false).await.unwrap();
-        processor.create_new_block(messages, None).await.unwrap();
+        processor.create_new_block(&messages, None).await.unwrap();
     }
 }
