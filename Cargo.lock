@@ -312,22 +312,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "bank"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "async-trait",
- "denali",
- "log",
- "macros",
- "rust_decimal",
- "semver",
- "serde",
- "serde_json",
- "tokio",
-]
-
-[[package]]
 name = "base64"
 version = "0.21.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1277,23 +1261,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2304e00983f87ffb38b55b444b5e3b60a884b5d30c0fca7d82fe33449bbe55ea"
 
 [[package]]
-name = "hello-world"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "async-trait",
- "denali",
- "hex",
- "log",
- "macros",
- "rust_decimal",
- "semver",
- "serde",
- "serde_json",
- "tokio",
-]
-
-[[package]]
 name = "hex"
 version = "0.4.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1817,9 +1784,9 @@ checksum = "241eaef5fd12c88705a01fc1066c48c4b36e0dd4377dcdc7ec3942cea7a69956"
 
 [[package]]
 name = "litrs"
-version = "0.4.1"
+version = "0.4.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b4ce301924b7887e9d637144fdade93f9dfff9b60981d4ac161db09720d39aa5"
+checksum = "f5e54036fe321fd421e10d732f155734c4e4afd610dd556d9a82833ab3ee0bed"
 
 [[package]]
 name = "load-test"

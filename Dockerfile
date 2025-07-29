@@ -15,16 +15,18 @@ COPY example_contracts/vote/src ./example_contracts/vote/src
 COPY example_contracts/vote/Cargo.toml ./example_contracts/vote
 COPY macros/src ./macros/src
 COPY macros/Cargo.toml ./macros
+COPY load-test/src ./load-test/src
+COPY load-test/Cargo.toml ./load-test
 COPY Cargo.toml ./
 
 RUN cd denali && \
-        cargo build --release
+        cargo build --release --package denali --package vote
 
 FROM debian:bookworm-slim
 
 WORKDIR /app
 COPY --from=builder /app/target/release/denali .
-# COPY --from=builder /app/target/release/libvote.so ./plugins
 RUN mkdir ./plugins
+COPY --from=builder /app/target/release/libvote.so ./plugins
 
 CMD ["./denali"]
