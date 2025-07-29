@@ -49,8 +49,7 @@ impl H256 {
 
 impl Display for H256 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        // todo is debug good to use here?
-        write!(f, "{:?}", self.0)
+        write!(f, "0x{}", encode(self.0))
     }
 }
 
@@ -132,6 +131,19 @@ pub struct Params {
 mod test {
     use super::*;
     use hex::encode;
+
+    #[test]
+    fn test_display() {
+        let val = H256::new([
+            102, 104, 122, 173, 248, 98, 189, 119, 108, 143, 193, 139, 142, 159, 142, 32, 8, 151,
+            20, 133, 110, 226, 51, 179, 144, 42, 89, 29, 13, 95, 41, 37,
+        ]);
+        let res = val.to_string();
+        assert_eq!(
+            res,
+            "0x66687aadf862bd776c8fc18b8e9f8e20089714856ee233b3902a591d0d5f2925"
+        )
+    }
 
     #[test]
     fn test_from_h256() {

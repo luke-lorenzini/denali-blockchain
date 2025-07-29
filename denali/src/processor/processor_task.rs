@@ -23,15 +23,17 @@ pub async fn processor_task(
         for message in messages {
             let program = contract_map.read().await;
             // println!("{:?}", message.0);
-            let program = program.get(&message.1).unwrap().thing.clone_box();
 
-            let transaction = Message {
-                program,
-                payload: message.2,
-                tx_id: message.0,
-                metadata: message.3,
-            };
-            transactions.push(transaction);
+            if let Some(program) = program.get(&message.1) {
+                let program = program.thing.clone_box();
+                let transaction = Message {
+                    program,
+                    payload: message.2,
+                    tx_id: message.0,
+                    metadata: message.3,
+                };
+                transactions.push(transaction);
+            }
         }
         let _res = processor
             .clone()

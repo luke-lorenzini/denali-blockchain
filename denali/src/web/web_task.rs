@@ -13,7 +13,13 @@ use crate::{
     messaging::ResponseTx,
     plugins::Plugin,
     processor::Processor,
-    web::{WebState, endpoints::*},
+    web::{
+        WebState,
+        endpoints::{
+            block_header, block_transactions, chain_hash, get_chain, get_height, get_tip, get_tx,
+            is_block, root, submit,
+        },
+    },
 };
 
 #[tracing::instrument]
