@@ -197,17 +197,15 @@ impl Chain {
         self.blocks.contains_key(&block_hash)
     }
 
-    // todo something to remove clone
-    pub(crate) fn get_block_header(&self, block_hash: H256) -> Option<Header> {
-        self.blocks.get(&block_hash).map(|h| h.header.clone())
+    pub(crate) fn get_block_header(&self, block_hash: H256) -> Option<&Header> {
+        self.blocks.get(&block_hash).map(|h| &h.header)
     }
 
-    // todo something to remove clone
     pub(crate) fn get_block_transactions(
         &self,
         block_hash: H256,
-    ) -> Option<HashMap<H256, Transaction>> {
-        self.blocks.get(&block_hash).map(|h| h.transactions.clone())
+    ) -> Option<&HashMap<H256, Transaction>> {
+        self.blocks.get(&block_hash).map(|h| &h.transactions)
     }
 
     fn get_block_hash(&self) -> H256 {
@@ -217,7 +215,7 @@ impl Chain {
     pub fn get_chain(&self) -> Vec<H256> {
         let mut current = self.get_tip().unwrap();
         let mut res = vec![current];
-        println!("tip: {:?}", String::from(self.tip.unwrap()));
+        println!("tip: {:?}", self.tip.unwrap().to_string());
 
         for _ in 0..self.count - 1 {
             let x = self.blocks.get(&current);
@@ -231,15 +229,15 @@ impl Chain {
     }
 
     // todo, return a ref
-    pub fn get_tx(&self, tx_id: &H256) -> String {
+    pub fn get_tx(&self, tx_id: &H256) -> Option<&str> {
         println!("Searching... {tx_id:?}");
-        for i in &self.blocks {
-            if let Some(v) = i.1.transactions.get(tx_id) {
-                return v.tx.clone();
+        for block in &self.blocks {
+            if let Some(v) = block.1.transactions.get(tx_id) {
+                return Some(&v.tx);
             }
         }
 
-        String::new()
+        None
     }
 
     pub fn get_chain_hash(&self) -> Result<H256> {

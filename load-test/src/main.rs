@@ -32,7 +32,7 @@ async fn main() -> Result<(), GooseError> {
                 // This transaction only runs one time when the user first starts.
                 // .register_transaction(transaction!(submit_tx).set_on_start())
                 // These next two transactions run repeatedly as long as the load test is running.
-                .register_transaction(transaction!(submit_hello_world)), // .register_transaction(transaction!(website_about)),
+                .register_transaction(transaction!(submit_vote)), // .register_transaction(transaction!(website_about)),
         )
         .execute()
         .await?;
@@ -50,7 +50,7 @@ async fn _website_login(user: &mut GooseUser) -> TransactionResult {
     Ok(())
 }
 
-async fn submit_hello_world(user: &mut GooseUser) -> TransactionResult {
+async fn submit_vote(user: &mut GooseUser) -> TransactionResult {
     let payload = json!({
         "program": "vote",
         "payload": { "candidate": "0" }

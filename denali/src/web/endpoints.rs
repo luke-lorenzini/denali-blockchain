@@ -65,8 +65,8 @@ pub async fn get_chain(State(state): State<WebState>) -> impl IntoResponse {
 
 pub async fn chain_hash(State(state): State<WebState>) -> impl IntoResponse {
     let chain = state.processor.read().await.chain.get_chain_hash();
-    let result = format!("{chain:?}");
-    (StatusCode::OK, result)
+    let result = chain.unwrap();
+    (StatusCode::OK, result.to_string())
 }
 
 pub async fn get_tx(
@@ -75,7 +75,9 @@ pub async fn get_tx(
 ) -> impl IntoResponse {
     let tx_id = params.block_hash.try_into();
     if tx_id.is_ok() {
-        let chain = state.processor.read().await.chain.get_tx(&tx_id.unwrap());
+        let chain = state.processor.read().await;
+        let chain = chain.chain.get_tx(&tx_id.unwrap());
+        let chain = chain.unwrap();
         let result = format!("{chain:?}");
         return (StatusCode::OK, result);
     }

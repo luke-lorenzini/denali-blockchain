@@ -1,6 +1,6 @@
 use std::{collections::HashMap, sync::Arc};
 
-use anyhow::Result;
+use anyhow::{Result, anyhow};
 use hex::encode;
 use sha2::{Digest, Sha256};
 use tokio::sync::{Mutex, Notify};
@@ -110,7 +110,9 @@ impl Processor {
         let res = hasher.finalize();
         // all the tx hashes wrapped into one 'merkle tree' <- need to impl a real tree
         let merkle_tree_root = encode(res);
-        let block_transactions = Arc::try_unwrap(transactions).unwrap().into_inner();
+        let block_transactions = Arc::try_unwrap(transactions)
+            .map_err(|e| anyhow!("{e:?}"))?
+            .into_inner();
         self.chain
             .add_next_block(merkle_tree_root.try_into()?, block_transactions, notify)?;
 
