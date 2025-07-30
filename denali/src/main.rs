@@ -70,15 +70,13 @@ async fn main() -> Result<()> {
             let handle = spawn({
                 let processor = processor.clone();
                 let notify = notify.clone();
-                async move {
-                    start_quinn_server(processor.clone(), notify.clone()).await
-                }
+                async move { start_quinn_server(processor.clone(), notify.clone()).await }
             });
             handles.push(handle);
             // let _plugin_scanner_task = spawn(plugin_scanner_task(PATH.as_ref(), plugin_tx));
             // let _plugin_builder_task = spawn(plugin_builder(contract_map.clone(), plugin_rx));
             let receiver_task = spawn(receiver_task(tx_msg_queue, rx));
-            handles.push(receiver_task);    
+            handles.push(receiver_task);
             let processor_task = spawn(processor_task(
                 contract_map.clone(),
                 processor.clone(),
@@ -99,9 +97,7 @@ async fn main() -> Result<()> {
             let handle = spawn({
                 let processor = processor.clone();
                 let notify = notify.clone();
-                async move {
-                    start_quinn_server(processor.clone(), notify).await
-                }
+                async move { start_quinn_server(processor.clone(), notify).await }
             });
             handles.push(handle);
             let plugin_scanner_task = spawn(plugin_scanner_task(PATH.as_ref(), plugin_tx));
@@ -130,9 +126,7 @@ async fn main() -> Result<()> {
             let handle = spawn({
                 let processor = processor.clone();
 
-                async move {
-                    start_quinn_client(processor.clone(), quic_port_number).await
-                }
+                async move { start_quinn_client(processor.clone(), quic_port_number).await }
             });
             handles.push(handle);
             let receiver_task = spawn(receiver_task(tx_msg_queue, rx));
