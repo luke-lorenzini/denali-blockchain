@@ -21,7 +21,7 @@ use crate::plugins::Plugin;
 pub async fn plugin_builder(
     contract_map: Arc<RwLock<HashMap<String, Plugin>>>,
     mut plugin_rx: TokioReceive<(&str, Option<Plugin>)>,
-) {
+) -> Result<()> {
     while let Some(v) = plugin_rx.recv().await {
         if v.1.is_some() {
             contract_map
@@ -32,6 +32,7 @@ pub async fn plugin_builder(
             contract_map.write().await.remove(v.0).unwrap();
         }
     }
+    Ok(())
 }
 
 #[tracing::instrument]
