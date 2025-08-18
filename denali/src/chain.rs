@@ -114,6 +114,7 @@ pub struct Chain {
     count: u32,
     pub state: Arc<State>,
     tip: Option<H256>,
+    temp_txs: Option<Vec<u8>>,
 }
 
 impl Chain {
@@ -133,6 +134,7 @@ impl Chain {
             blocks,
             state,
             tip,
+            temp_txs: None,
         })
     }
 
@@ -149,6 +151,7 @@ impl Chain {
             count,
             state,
             tip: None,
+            temp_txs: None,
         };
         chain.add_received_blocks(encoded_blocks)?;
         Ok(chain)
@@ -252,6 +255,19 @@ impl Chain {
         Ok(result)
     }
 
+    pub fn set_txs(&mut self, temp_txs: &[u8]) {
+        self.temp_txs = Some(temp_txs.to_owned());
+    }
+
+    pub fn transmit_txs(&self) -> Result<Vec<u8>> {
+        if self.temp_txs.is_none() {
+            bail!("No transactions ready");
+        } else {
+            let temp = self.temp_txs.clone().expect("Already checked");
+            Ok(temp)
+        }
+    }
+
     pub fn transmit_blocks(&self, block_hash: Option<&H256>) -> Result<Option<Vec<u8>>> {
         if block_hash.is_some() && block_hash.unwrap() == self.tip.as_ref().unwrap() {
             // client is already at the latest, maybe return Ok<None>
@@ -279,7 +295,7 @@ impl Chain {
                     block = self.blocks.get(&block.header.previous_block_hash).unwrap();
                     result.push(block);
                 }
-                // Ensure we don't add the genisis block twice
+                // Ensure we don't add the genesis block twice
                 if self.count != 1 {
                     // Add the genesis block.
                     block = self.blocks.get(&H256::zero()).unwrap();
@@ -319,7 +335,7 @@ mod test {
     }
 
     #[test]
-    fn test_transmit_block_gensis_only() {
+    fn test_transmit_block_genesis_only() {
         let chain = Chain::new(false).unwrap();
         let res = chain.transmit_blocks(None).unwrap();
         assert!(res.is_some());

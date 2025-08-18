@@ -6,8 +6,11 @@ use denali::{
     constants::PATH,
     messaging::receiver_task,
     plugins::plugin_task::{plugin_builder, plugin_scanner_task},
-    processor::{Processor, processor_task::processor_task},
-    quinn::{client::start_quinn_client, server::start_quinn_server},
+    processor::{
+        Processor,
+        processor_task::{processor_receive_batch_txs, processor_task},
+    },
+    quinn::{Roles, client::start_quinn_client, server::start_quinn_server},
     web::web_task::web_task,
 };
 use futures::future::join_all;
@@ -32,13 +35,6 @@ struct Args {
     validator_sync: bool,
 }
 
-#[derive(PartialEq)]
-enum Roles {
-    Receiver,
-    Validator,
-    Archiver,
-}
-
 #[tokio::main(flavor = "multi_thread")]
 async fn main() -> Result<()> {
     // #[cfg(feature = "console")]
@@ -61,29 +57,43 @@ async fn main() -> Result<()> {
     let processor = Arc::new(RwLock::new(Processor::new(archiver, validator_sync).await?));
     let (tx, rx) = channel(channel_size);
     let (tx_msg_queue, rx_msg_queue) = channel(channel_size);
+    let (tx_batch_queue, rx_batch_queue) = channel(channel_size);
     let contract_map = Arc::new(RwLock::new(HashMap::new()));
     let (plugin_tx, plugin_rx) = channel(channel_size);
     let mut handles = vec![];
 
     match role {
         Roles::Receiver => {
-            let handle = spawn({
+            let server_task = spawn({
                 let processor = processor.clone();
                 let notify = notify.clone();
-                async move { start_quinn_server(processor.clone(), notify.clone()).await }
+                async move { start_quinn_server(processor.clone(), notify.clone(), role).await }
             });
-            handles.push(handle);
-            // let _plugin_scanner_task = spawn(plugin_scanner_task(PATH.as_ref(), plugin_tx));
-            // let _plugin_builder_task = spawn(plugin_builder(contract_map.clone(), plugin_rx));
-            let receiver_task = spawn(receiver_task(tx_msg_queue, rx));
-            handles.push(receiver_task);
-            let processor_task = spawn(processor_task(
-                contract_map.clone(),
-                processor.clone(),
-                rx_msg_queue,
-                Some(notify.clone()),
+            handles.push(server_task);
+            let plugin_scanner_task = spawn(plugin_scanner_task(PATH.as_ref(), plugin_tx));
+            handles.push(plugin_scanner_task);
+            let plugin_builder_task = spawn(plugin_builder(contract_map.clone(), plugin_rx));
+            handles.push(plugin_builder_task);
+            let receiver_task = spawn(receiver_task(
+                // tx_msg_queue,
+                tx_batch_queue,
+                rx,
             ));
-            handles.push(processor_task);
+            handles.push(receiver_task);
+            // let processor_task = spawn(processor_task(
+            //     contract_map.clone(),
+            //     processor.clone(),
+            //     rx_msg_queue,
+            //     Some(notify.clone()),
+            // ));
+            // handles.push(processor_task);
+            let processor_batch_task = spawn(processor_receive_batch_txs(
+                // contract_map.clone(),
+                processor.clone(),
+                rx_batch_queue,
+                notify.clone(),
+            ));
+            handles.push(processor_batch_task);
             let web_task = spawn(web_task(
                 tx,
                 processor.clone(),
@@ -94,18 +104,21 @@ async fn main() -> Result<()> {
             handles.push(web_task);
         }
         Roles::Validator => {
-            let handle = spawn({
+            let client_task = spawn({
                 let processor = processor.clone();
-                let notify = notify.clone();
-                async move { start_quinn_server(processor.clone(), notify).await }
+                // let notify = notify.clone();
+                async move {
+                    start_quinn_client(processor.clone(), quic_port_number, role, tx_msg_queue)
+                        .await
+                }
             });
-            handles.push(handle);
+            handles.push(client_task);
             let plugin_scanner_task = spawn(plugin_scanner_task(PATH.as_ref(), plugin_tx));
             handles.push(plugin_scanner_task);
             let plugin_builder_task = spawn(plugin_builder(contract_map.clone(), plugin_rx));
             handles.push(plugin_builder_task);
-            let receiver_task = spawn(receiver_task(tx_msg_queue, rx));
-            handles.push(receiver_task);
+            // let receiver_task = spawn(receiver_task(tx_msg_queue, rx));
+            // handles.push(receiver_task);
             let processor_task = spawn(processor_task(
                 contract_map.clone(),
                 processor.clone(),
@@ -123,21 +136,26 @@ async fn main() -> Result<()> {
             handles.push(web_task);
         }
         Roles::Archiver => {
-            let handle = spawn({
+            let client_task = spawn({
                 let processor = processor.clone();
 
-                async move { start_quinn_client(processor.clone(), quic_port_number).await }
+                async move {
+                    start_quinn_client(processor.clone(), quic_port_number, role, tx_msg_queue)
+                        .await
+                }
             });
-            handles.push(handle);
-            let receiver_task = spawn(receiver_task(tx_msg_queue, rx));
-            handles.push(receiver_task);
-            let processor_task = spawn(processor_task(
-                contract_map.clone(),
-                processor.clone(),
-                rx_msg_queue,
-                Some(notify.clone()),
-            ));
-            handles.push(processor_task);
+            handles.push(client_task);
+            let plugin_scanner_task = spawn(plugin_scanner_task(PATH.as_ref(), plugin_tx));
+            handles.push(plugin_scanner_task);
+            // let receiver_task = spawn(receiver_task(tx_msg_queue, rx));
+            // handles.push(receiver_task);
+            // let processor_task = spawn(processor_task(
+            //     contract_map.clone(),
+            //     processor.clone(),
+            //     rx_msg_queue,
+            //     Some(notify.clone()),
+            // ));
+            // handles.push(processor_task);
             let web_task = spawn(web_task(
                 tx,
                 processor.clone(),

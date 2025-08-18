@@ -1,4 +1,5 @@
 use std::{
+    collections::HashMap,
     fs, io,
     net::{IpAddr, Ipv4Addr, SocketAddr},
     sync::Arc,
@@ -21,13 +22,18 @@ use tokio::{
     sync::{Mutex, Notify, RwLock},
 };
 
-use crate::{processor::Processor, quinn::ALPN_QUIC_HTTP, types::H256};
+use crate::{
+    processor::Processor,
+    quinn::{ALPN_QUIC_HTTP, Roles},
+    types::H256,
+};
 
-type NotificationClients = Arc<Mutex<Vec<quinn::SendStream>>>;
+type NotificationClients = Arc<Mutex<HashMap<String, Vec<quinn::SendStream>>>>;
 
 pub async fn start_quinn_server(
     processor: Arc<RwLock<Processor>>,
     notify: Arc<Notify>,
+    role: Roles,
 ) -> Result<()> {
     // Luke - start
     rustls::crypto::ring::default_provider()
@@ -35,13 +41,35 @@ pub async fn start_quinn_server(
         .expect("Failed to install rustls crypto provider");
     // Luke - end
 
-    let clients: NotificationClients = Arc::new(Mutex::new(Vec::new()));
+    let clients: NotificationClients = Arc::new(Mutex::new(HashMap::new()));
     let clients_clone = clients.clone();
 
     spawn(async move {
         loop {
+            // receiver gets (internally) notified when a new batch of transactions is ready, sends message to validator
+            // validator gets (internally) notified when a new block is ready, sends message to receiver
+            // receiver gets notified when a new block is ready from validator, pulls then sends message to archiver
             notify.notified().await;
-            broadcast_notification(clients_clone.clone(), b"000Event occurred!\n").await;
+            // determine if role is receiver or validator
+            match role {
+                Roles::Archiver => todo!(),
+                Roles::Receiver => {
+                    broadcast_notification(
+                        clients_clone.clone(),
+                        b"000Event occurred!\n",
+                        role.clone(),
+                    )
+                    .await
+                }
+                Roles::Validator => {
+                    broadcast_notification(
+                        clients_clone.clone(),
+                        b"000Event occurred!\n",
+                        role.clone(),
+                    )
+                    .await
+                }
+            }
         }
     });
 
@@ -173,13 +201,39 @@ async fn handle_connection(
     let mut tag = [0u8; 6];
     notify_recv.read_exact(&mut tag).await?;
 
-    if &tag != b"NOTIFY" {
+    if &tag != b"VNTIFY" && &tag != b"ANTIFY" {
         bail!("First stream from client must be NOTIFY")
     }
 
     {
         let mut locked = clients.lock().await;
-        locked.push(notify_send);
+        match &tag {
+            b"VNTIFY" => {
+                let x = locked.get_mut("validator");
+                match x {
+                    Some(v) => {
+                        v.push(notify_send);
+                    }
+                    None => {
+                        let v = vec![notify_send];
+                        locked.insert("validator".into(), v);
+                    }
+                }
+            }
+            b"ANTIFY" => {
+                let x = locked.get_mut("archiver");
+                match x {
+                    Some(v) => {
+                        v.push(notify_send);
+                    }
+                    None => {
+                        let v = vec![notify_send];
+                        locked.insert("archiver".into(), v);
+                    }
+                }
+            }
+            _ => todo!(),
+        }
     }
 
     println!("client registered for notifications");
@@ -216,9 +270,13 @@ async fn handle_connection(
                     eprintln!("request failed: {e}");
                 }
             });
-        } else if &tag == b"NOTIFY" {
-            println!("Received NOTIFY request");
-            todo!()
+        } else if &tag == b"GETTXS" {
+            let proc = processor.clone();
+            tokio::spawn(async move {
+                if let Err(e) = handle_gettxs_request(send, proc).await {
+                    eprintln!("request failed: {e}");
+                }
+            });
         } else if &tag == b"VSYNCX" {
             let proc = processor.clone();
             tokio::spawn(async move {
@@ -333,7 +391,17 @@ async fn handle_vsyncx_request(
     mut send: quinn::SendStream,
     processor: Arc<RwLock<Processor>>,
 ) -> Result<()> {
-    let resp = processor.read().await.chain.transmit_state()?;
+    let resp = processor.read().await.chain.transmit_txs()?;
+    send.write_all(&resp).await?;
+    send.finish()?;
+    Ok(())
+}
+
+async fn handle_gettxs_request(
+    mut send: quinn::SendStream,
+    processor: Arc<RwLock<Processor>>,
+) -> Result<()> {
+    let resp = processor.read().await.chain.transmit_txs()?;
     send.write_all(&resp).await?;
     send.finish()?;
     Ok(())
@@ -386,15 +454,20 @@ async fn process_get(
 }
 
 // Notify the connected clients that a new block is ready.
-pub async fn broadcast_notification(clients: NotificationClients, message: &[u8]) {
+pub async fn broadcast_notification(clients: NotificationClients, message: &[u8], role: Roles) {
     let mut clients_lock = clients.lock().await;
 
     let mut i = 0;
     while i < clients_lock.len() {
-        let result = clients_lock[i].write_all(message).await;
+        let clients_vec = match role {
+            Roles::Archiver => todo!(),
+            Roles::Validator => todo!(),
+            Roles::Receiver => clients_lock.get_mut("validator").expect("All good"),
+        };
+        let result = clients_vec[i].write_all(message).await;
         if result.is_err() {
             eprintln!("client disconnected: {:?}", result.err());
-            clients_lock.remove(i);
+            clients_vec.remove(i);
         } else {
             i += 1;
         }

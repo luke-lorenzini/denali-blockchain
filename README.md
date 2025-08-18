@@ -10,10 +10,10 @@
 - version for plugin traits
 - ~~microsecond timestamps~~
 - timestamp phantoms
-- create hello-world plugin
+- ~~create hello-world plugin~~
 - builder (master / slave)
 - plugin delete and upgrade
-- HL API endpoints
+- Hyperlane API endpoints
 - ~~config file~~
 - merkle_tree_root
 - ~~H256 -> String should be from, not try_from~~
@@ -22,7 +22,7 @@
 - todos
 - instrument
 - println
-- deploy two nodes, (need builder to config running as M or S)
+- ~~deploy two nodes~~
 - gossip
 - consensus
 - pub keys for programs
@@ -59,16 +59,16 @@ Get the chain:
 curl -X GET 'http://localhost:3000/get-chain'
 ```
 
+Submit a hello-world transaction:
+
+```bash
+curl -X POST http://localhost:3000/submit -H "Content-Type: application/json" -d "{\"program\":\"hello-world\",\"payload\":{\"candidate\":\"0\"}}"
+```
+
 Submit a vote transaction:
 
 ```bash
-curl -X POST http://localhost:3000/submit -H "Content-Type: application/json" -d "{\"program\":\"vote\",\"payload\":{\"candidate\":\"candidate1\"}}"
-```
-
-Submit a fake transaction:
-
-```bash
-curl -X POST http://localhost:3000/submit -H "Content-Type: application/json" -d "{\"program\":\"fake\",\"payload\":{\"fake\":0}}"
+curl -X POST http://localhost:3000/submit -H "Content-Type: application/json" -d "{\"program\":\"vote\",\"payload\":{\"candidate\":\"0\"}}"
 ```
 
 ```bash
@@ -87,6 +87,26 @@ curl -G http://localhost:3000/get-block-header -d "block_hash=000000000000000000
 curl -G http://localhost:3000/get-block-transactions -d "block_hash=0000000000000000000000000000000000000000000000000000000000000000"
 ```
 
+Run a receiver.
+
 ```bash
-curl -X GET 'http://localhost:3000/events?start=1749207505632&end=1749207515632&log_type=xxx'
+cargo r -r -- -r 0
+```
+
+Run a validator.
+
+```bash
+cargo r -r -- -r 1 -w 3007 -q 4437
+```
+
+Run a storage node.
+
+```bash
+cargo r -r -- -r 2 -w 3001 -q 4431
+```
+
+Run another storage node.
+
+```bash
+cargo r -r -- -r 2 -w 3002 -q 4432
 ```

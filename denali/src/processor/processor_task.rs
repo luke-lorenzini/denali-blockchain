@@ -11,6 +11,23 @@ use crate::{
 };
 
 #[tracing::instrument]
+pub async fn processor_receive_batch_txs(
+    processor: Arc<RwLock<Processor>>,
+    mut rx_batch_queue: Receiver<Vec<u8>>,
+    notify: Arc<Notify>,
+) -> Result<()> {
+    while let Some(transactions) = rx_batch_queue.recv().await {
+        let _res = processor
+            .clone()
+            .write()
+            .await
+            .receive_batch_txs(&transactions, notify.clone())
+            .await;
+    }
+    Ok(())
+}
+
+#[tracing::instrument]
 pub async fn processor_task(
     contract_map: Arc<RwLock<HashMap<String, Plugin>>>,
     processor: Arc<RwLock<Processor>>,

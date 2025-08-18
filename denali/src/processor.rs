@@ -92,6 +92,11 @@ impl Processor {
         Ok(res)
     }
 
+    pub async fn receive_batch_txs(&mut self, txs: &[u8], notify: Arc<Notify>) {
+        self.chain.set_txs(txs);
+        notify.notify_one();
+    }
+
     // Process a batch of transactions
     pub async fn create_new_block(
         &mut self,

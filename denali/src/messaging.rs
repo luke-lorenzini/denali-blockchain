@@ -1,5 +1,5 @@
 use anyhow::Result;
-use borsh::{BorshDeserialize, BorshSerialize};
+use borsh::{BorshDeserialize, BorshSerialize, to_vec};
 use chrono::Utc;
 use hex::encode;
 use log::trace;
@@ -29,7 +29,7 @@ pub struct ResponseRx {
     pub tx_id: H256,
 }
 
-pub async fn message_generator_task(tx: Sender<(String, String, Meta)>) -> Result<()> {
+pub async fn _message_generator_task(tx: Sender<(String, String, Meta)>) -> Result<()> {
     let mut flag = 0;
 
     loop {
@@ -71,8 +71,10 @@ pub async fn message_generator_task(tx: Sender<(String, String, Meta)>) -> Resul
 
 #[tracing::instrument]
 pub async fn receiver_task(
-    tx_msg_queue: Sender<Vec<(H256, String, String, Meta)>>,
+    // tx_msg_queue: Sender<Vec<(H256, String, String, Meta)>>,
+    tx_batch_queue: Sender<Vec<u8>>,
     mut rx: Receiver<ResponseTx>,
+    // notify: Arc<Notify>,
 ) -> Result<()> {
     let mut transactions = Vec::new();
 
@@ -95,7 +97,9 @@ pub async fn receiver_task(
         transactions.push((tx_id, i.program, i.payload, i.metadata));
         if transactions.len() == BATCH_SIZE {
             let batch = std::mem::take(&mut transactions);
-            tx_msg_queue.send(batch).await?;
+            let batch = to_vec(&batch).unwrap();
+            tx_batch_queue.send(batch).await?;
+            // notify.notify_one();
         }
     }
 

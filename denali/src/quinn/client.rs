@@ -8,7 +8,8 @@ use std::{
     sync::Arc,
 };
 
-use anyhow::Result;
+use anyhow::{Result, bail};
+use borsh::from_slice;
 use log::{error, info};
 use quinn::Connection;
 use quinn_proto::crypto::rustls::QuicClientConfig;
@@ -17,10 +18,15 @@ use rustls::pki_types::{
     // PrivateKeyDer,
     // PrivatePkcs8KeyDer
 };
-use tokio::sync::{Notify, RwLock};
+use tokio::sync::{Notify, RwLock, mpsc::Sender};
 use url::Url;
 
-use crate::{processor::Processor, quinn::ALPN_QUIC_HTTP};
+use crate::{
+    messaging::Meta,
+    processor::Processor,
+    quinn::{ALPN_QUIC_HTTP, Roles},
+    types::H256,
+};
 
 // todo: clean me!
 pub async fn quinn_one_shot_sync(port_number: u16) -> Result<(Vec<u8>, Vec<u8>)> {
@@ -83,7 +89,12 @@ pub async fn quinn_one_shot_sync(port_number: u16) -> Result<(Vec<u8>, Vec<u8>)>
     Ok((encoded_state, encoded_blocks))
 }
 
-pub async fn start_quinn_client(processor: Arc<RwLock<Processor>>, port_number: u16) -> Result<()> {
+pub async fn start_quinn_client(
+    processor: Arc<RwLock<Processor>>,
+    port_number: u16,
+    role: Roles,
+    tx_msg_queue: Sender<Vec<(H256, String, String, Meta)>>,
+) -> Result<()> {
     // Luke - start
     rustls::crypto::ring::default_provider()
         .install_default()
@@ -141,7 +152,7 @@ pub async fn start_quinn_client(processor: Arc<RwLock<Processor>>, port_number: 
     // new stuff
     let host = url_host;
     let conn = endpoint.connect(remote, host)?.await?;
-    connect_and_listen(conn, processor).await?;
+    connect_and_listen(conn, processor, role, tx_msg_queue).await?;
 
     // Start July 21
     // // let request = format!("NOTIFY {}\r\n", url.path());
@@ -251,50 +262,103 @@ async fn _connect_to_server() -> Result<Connection> {
 async fn connect_and_listen(
     connection: Connection,
     processor: Arc<RwLock<Processor>>,
+    role: Roles,
+    tx_msg_queue: Sender<Vec<(H256, String, String, Meta)>>,
 ) -> Result<()> {
-    // let connection = connect_to_server().await?;
-    let notify = Arc::new(Notify::new());
-    // === Register for notifications
-    let (mut notify_send, mut notify_recv) = connection.open_bi().await?;
-    // Send the string required by server
-    notify_send.write_all(b"NOTIFY").await?;
-    notify_send.finish()?;
-    println!("Notified server");
+    match role {
+        Roles::Receiver => {
+            // let connection = connect_to_server().await?;
+            let notify = Arc::new(Notify::new());
+            // === Register for notifications
+            let (mut notify_send, mut notify_recv) = connection.open_bi().await?;
+            // Send the string required by server
+            notify_send.write_all(b"ANTIFY").await?;
+            notify_send.finish()?;
 
-    let notify_clone = notify.clone();
-    tokio::spawn(async move {
-        let mut buf = [0u8; 1024];
-        while let Ok(Some(_n)) = notify_recv.read(&mut buf).await {
-            // println!("got notification: {:?}", &buf[..n]);
-            notify_clone.notify_one();
-            // act based on content, maybe open a REQUES stream here
+            let notify_clone = notify.clone();
+            tokio::spawn(async move {
+                let mut buf = [0u8; 1024];
+                while let Ok(Some(_n)) = notify_recv.read(&mut buf).await {
+                    // println!("got notification: {:?}", &buf[..n]);
+                    notify_clone.notify_one();
+                    // act based on content, maybe open a REQUES stream here
+                }
+            });
+
+            let (mut send, mut recv) = connection.open_bi().await?;
+            send.write_all(b"SYNCRO").await?;
+            send.finish()?;
+            let resp = recv.read_to_end(usize::MAX).await?;
+            processor.write().await.chain.add_received_blocks(resp)?;
+            // === Later, issue requests
+            loop {
+                notify.notified().await;
+                // println!("notified!");
+                // Example: request new block
+                let (mut send, mut recv) = connection.open_bi().await?;
+                // send.write_all(b"REQUES").await?;
+                // send.write_all(b"GET NEW BLOCK\n").await?;
+                // read response if needed
+                let tip = processor.read().await.chain.get_tip();
+                // let payload = format!("UPDATE{}", tip);
+                // println!("{payload:?}");
+                send.write_all(b"UPDATE").await?;
+                send.write_all(tip.unwrap().as_ref()).await?;
+                send.finish()?;
+                let resp = recv.read_to_end(usize::MAX).await?;
+                processor.write().await.chain.add_received_blocks(resp)?;
+            }
+            // Ok(())
         }
-    });
+        Roles::Validator => {
+            // let connection = connect_to_server().await?;
+            let notify = Arc::new(Notify::new());
+            // === Register for notifications
+            let (mut notify_send, mut notify_recv) = connection.open_bi().await?;
+            // Send the string required by server
+            notify_send.write_all(b"VNTIFY").await?;
+            notify_send.finish()?;
 
-    let (mut send, mut recv) = connection.open_bi().await?;
-    send.write_all(b"SYNCRO").await?;
-    send.finish()?;
-    let resp = recv.read_to_end(usize::MAX).await?;
-    processor.write().await.chain.add_received_blocks(resp)?;
-    // === Later, issue requests
-    loop {
-        notify.notified().await;
-        // println!("notified!");
-        // Example: request new block
-        let (mut send, mut recv) = connection.open_bi().await?;
-        // send.write_all(b"REQUES").await?;
-        // send.write_all(b"GET NEW BLOCK\n").await?;
-        // read response if needed
-        let tip = processor.read().await.chain.get_tip();
-        // let payload = format!("UPDATE{}", tip);
-        // println!("{payload:?}");
-        send.write_all(b"UPDATE").await?;
-        send.write_all(tip.unwrap().as_ref()).await?;
-        send.finish()?;
-        let resp = recv.read_to_end(usize::MAX).await?;
-        processor.write().await.chain.add_received_blocks(resp)?;
+            let notify_clone = notify.clone();
+            tokio::spawn(async move {
+                let mut buf = [0u8; 1024];
+                while let Ok(Some(_n)) = notify_recv.read(&mut buf).await {
+                    notify_clone.notify_one();
+                    // act based on content, maybe open a REQUES stream here
+                }
+            });
+
+            // let (mut send, mut recv) = connection.open_bi().await?;
+            // send.write_all(b"GETTXS").await?;
+            // send.finish()?;
+            // let resp = recv.read_to_end(usize::MAX).await?;
+            // processor.write().await.chain.add_received_blocks(resp)?;
+            // === Later, issue requests
+            loop {
+                notify.notified().await;
+                // println!("notified!");
+                // Example: request new block
+                let (mut send, mut recv) = connection.open_bi().await?;
+                // send.write_all(b"REQUES").await?;
+                // send.write_all(b"GET NEW BLOCK\n").await?;
+                // read response if needed
+                let tip = processor.read().await.chain.get_tip();
+                // let payload = format!("UPDATE{}", tip);
+                // println!("{payload:?}");
+                send.write_all(b"GETTXS").await?;
+                send.write_all(tip.unwrap().as_ref()).await?;
+                send.finish()?;
+
+                let transactions = recv.read_to_end(usize::MAX).await?;
+                // let batch = std::mem::take(&mut transactions);
+                let txs = from_slice(&transactions).unwrap();
+                tx_msg_queue.send(txs).await?;
+                // println!("got txs: {txs:?}");
+            }
+            // Ok(())
+        }
+        _ => bail!("Role cannot be a client"),
     }
-    // Ok(())
 }
 
 fn strip_ipv6_brackets(host: &str) -> &str {
