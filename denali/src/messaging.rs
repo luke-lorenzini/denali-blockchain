@@ -4,12 +4,9 @@ use chrono::Utc;
 use hex::encode;
 use log::trace;
 use sha2::{Digest, Sha256};
-use tokio::{
-    sync::{
-        mpsc::{Receiver, Sender},
-        oneshot,
-    },
-    time::{Duration, sleep},
+use tokio::sync::{
+    mpsc::{Receiver, Sender},
+    oneshot,
 };
 
 use crate::{constants::BATCH_SIZE, types::H256};
@@ -27,46 +24,6 @@ pub struct ResponseTx {
 pub struct ResponseRx {
     pub status: bool,
     pub tx_id: H256,
-}
-
-pub async fn _message_generator_task(tx: Sender<(String, String, Meta)>) -> Result<()> {
-    let mut flag = 0;
-
-    loop {
-        sleep(Duration::from_millis(100)).await;
-
-        let payload;
-        let program;
-        if flag == 0 {
-            flag = 1;
-            // A fake - working
-            payload = r#"
-                {
-                    "fake": 0
-                }"#;
-            program = "fake";
-        } else if flag == 1 {
-            flag = 2;
-            // A bank
-            payload = r#"
-                {
-                    "payer": 0,
-                    "payee": 1,
-                    "amount": 10.0
-                }"#;
-            program = "bank";
-        } else {
-            flag = 0;
-            // A vote - working
-            payload = r#"
-                {
-                    "candidate": "candidate1"
-                }"#;
-            program = "vote";
-        }
-
-        tx.send((program.into(), payload.into(), Meta {})).await?;
-    }
 }
 
 #[tracing::instrument]
