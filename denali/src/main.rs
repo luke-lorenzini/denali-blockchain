@@ -50,11 +50,15 @@ async fn main() -> Result<()> {
     let quic_port_number = args.quic_port_number;
     let web_port_number = args.web_port_number;
     let validator_sync = args.validator_sync;
-    let archiver = role == Roles::Archiver;
+    let archiver = role == Roles::Archiver || role == Roles::Receiver;
+    println!("replica: {archiver:?}");
 
     let notify = Arc::new(Notify::new());
+    let notify_archiver = Arc::new(Notify::new());
     let channel_size = 100;
-    let processor = Arc::new(RwLock::new(Processor::new(archiver, validator_sync).await?));
+    let processor = Arc::new(RwLock::new(
+        Processor::new(archiver, validator_sync, notify.clone()).await?,
+    ));
     let (tx, rx) = channel(channel_size);
     let (tx_msg_queue, rx_msg_queue) = channel(channel_size);
     let (tx_batch_queue, rx_batch_queue) = channel(channel_size);
@@ -67,7 +71,15 @@ async fn main() -> Result<()> {
             let server_task = spawn({
                 let processor = processor.clone();
                 let notify = notify.clone();
-                async move { start_quinn_server(processor.clone(), notify.clone(), role).await }
+                async move {
+                    start_quinn_server(
+                        processor.clone(),
+                        notify.clone(),
+                        // role,
+                        notify_archiver,
+                    )
+                    .await
+                }
             });
             handles.push(server_task);
             let plugin_scanner_task = spawn(plugin_scanner_task(PATH.as_ref(), plugin_tx));
@@ -106,10 +118,16 @@ async fn main() -> Result<()> {
         Roles::Validator => {
             let client_task = spawn({
                 let processor = processor.clone();
-                // let notify = notify.clone();
+                let notify = notify.clone();
                 async move {
-                    start_quinn_client(processor.clone(), quic_port_number, role, tx_msg_queue)
-                        .await
+                    start_quinn_client(
+                        processor.clone(),
+                        quic_port_number,
+                        role,
+                        tx_msg_queue,
+                        Some(notify.clone()),
+                    )
+                    .await
                 }
             });
             handles.push(client_task);
@@ -140,8 +158,14 @@ async fn main() -> Result<()> {
                 let processor = processor.clone();
 
                 async move {
-                    start_quinn_client(processor.clone(), quic_port_number, role, tx_msg_queue)
-                        .await
+                    start_quinn_client(
+                        processor.clone(),
+                        quic_port_number,
+                        role,
+                        tx_msg_queue,
+                        None,
+                    )
+                    .await
                 }
             });
             handles.push(client_task);

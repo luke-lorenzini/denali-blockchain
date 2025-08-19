@@ -22,18 +22,15 @@ use tokio::{
     sync::{Mutex, Notify, RwLock},
 };
 
-use crate::{
-    processor::Processor,
-    quinn::{ALPN_QUIC_HTTP, Roles},
-    types::H256,
-};
+use crate::{processor::Processor, quinn::ALPN_QUIC_HTTP, types::H256};
 
 type NotificationClients = Arc<Mutex<HashMap<String, Vec<quinn::SendStream>>>>;
 
 pub async fn start_quinn_server(
     processor: Arc<RwLock<Processor>>,
-    notify: Arc<Notify>,
-    role: Roles,
+    tx_batch_ready: Arc<Notify>,
+    // role: Roles,
+    archiver_notify: Arc<Notify>,
 ) -> Result<()> {
     // Luke - start
     rustls::crypto::ring::default_provider()
@@ -43,33 +40,55 @@ pub async fn start_quinn_server(
 
     let clients: NotificationClients = Arc::new(Mutex::new(HashMap::new()));
     let clients_clone = clients.clone();
+    // let cloned_role = role.clone();
+
+    let notify_clone = tx_batch_ready.clone();
+    spawn(async move {
+        loop {
+            // receiver gets (internally) notified when a new batch of transactions is ready, sends message to validator
+            // validator gets (internally) notified when a new block is ready, sends message to receiver
+            // receiver gets notified when a new block is ready from validator, pulls then sends message to archiver
+            notify_clone.notified().await;
+            // determine if role is receiver or validator
+            // match role {
+            //     Roles::Archiver => todo!(),
+            //     Roles::Receiver => {
+            broadcast_notification_to_validators(
+                clients_clone.clone(),
+                b"000Event occurred!\n",
+                // cloned_role.clone(),
+            )
+            .await
+            //     }
+            //     Roles::Validator => todo!()
+            // }
+        }
+    });
+
+    let clients_clone = clients.clone();
+    let archiver_clone = archiver_notify.clone();
+    // let role = role.clone();
 
     spawn(async move {
         loop {
             // receiver gets (internally) notified when a new batch of transactions is ready, sends message to validator
             // validator gets (internally) notified when a new block is ready, sends message to receiver
             // receiver gets notified when a new block is ready from validator, pulls then sends message to archiver
-            notify.notified().await;
+            archiver_clone.notified().await;
             // determine if role is receiver or validator
-            match role {
-                Roles::Archiver => todo!(),
-                Roles::Receiver => {
-                    broadcast_notification(
-                        clients_clone.clone(),
-                        b"000Event occurred!\n",
-                        role.clone(),
-                    )
-                    .await
-                }
-                Roles::Validator => {
-                    broadcast_notification(
-                        clients_clone.clone(),
-                        b"000Event occurred!\n",
-                        role.clone(),
-                    )
-                    .await
-                }
-            }
+            // match role {
+            //     Roles::Archiver => todo!(),
+            //     Roles::Receiver => {
+            // println!("notifying archiver");
+            broadcast_notification_to_archivers(
+                clients_clone.clone(),
+                b"000Event occurred!\n",
+                // role.clone(),
+            )
+            .await
+            // }
+            // Roles::Validator => todo!()
+            // }
         }
     });
 
@@ -178,7 +197,8 @@ pub async fn start_quinn_server(
         //     conn.retry().unwrap();
         // } else {
         println!("accepting connection");
-        let fut = handle_connection(conn, processor.clone(), clients.clone());
+        let archiver_notify = archiver_notify.clone();
+        let fut = handle_connection(conn, processor.clone(), clients.clone(), archiver_notify);
         tokio::spawn(async move {
             if let Err(e) = fut.await {
                 println!("connection failed: {e}");
@@ -194,6 +214,7 @@ async fn handle_connection(
     conn: quinn::Incoming,
     processor: Arc<RwLock<Processor>>,
     clients: NotificationClients,
+    archiver_notify: Arc<Notify>,
 ) -> Result<()> {
     let connection = conn.await?;
 
@@ -254,7 +275,7 @@ async fn handle_connection(
             todo!();
         }
         if &tag == b"SYNCRO" {
-            // println!("Received SYNCRO request");
+            println!("SYNCRO");
             let proc = processor.clone();
             tokio::spawn(async move {
                 if let Err(e) = handle_syncro_request((send, recv), proc).await {
@@ -262,7 +283,7 @@ async fn handle_connection(
                 }
             });
         } else if &tag == b"UPDATE" {
-            // println!("Received UPDATE request");
+            //  println!("UPDATE");
             let proc = processor.clone();
             tokio::spawn(async move {
                 // todo: replace None with Some<T>
@@ -271,6 +292,7 @@ async fn handle_connection(
                 }
             });
         } else if &tag == b"GETTXS" {
+            // println!("GETTXS");
             let proc = processor.clone();
             tokio::spawn(async move {
                 if let Err(e) = handle_gettxs_request(send, proc).await {
@@ -278,9 +300,19 @@ async fn handle_connection(
                 }
             });
         } else if &tag == b"VSYNCX" {
+            println!("VSYNCX");
             let proc = processor.clone();
             tokio::spawn(async move {
                 if let Err(e) = handle_vsyncx_request(send, proc).await {
+                    eprintln!("request failed: {e}");
+                }
+            });
+        } else if &tag == b"NEWBLK" {
+            // println!("NEWBLK");
+            let proc = processor.clone();
+            let archiver_notify = archiver_notify.clone();
+            tokio::spawn(async move {
+                if let Err(e) = handle_newblock_request(send, recv, proc, archiver_notify).await {
                     eprintln!("request failed: {e}");
                 }
             });
@@ -391,12 +423,13 @@ async fn handle_vsyncx_request(
     mut send: quinn::SendStream,
     processor: Arc<RwLock<Processor>>,
 ) -> Result<()> {
-    let resp = processor.read().await.chain.transmit_txs()?;
+    let resp = processor.read().await.chain.transmit_state()?;
     send.write_all(&resp).await?;
     send.finish()?;
     Ok(())
 }
 
+// Get all the pending transactions from the receiver.
 async fn handle_gettxs_request(
     mut send: quinn::SendStream,
     processor: Arc<RwLock<Processor>>,
@@ -404,6 +437,47 @@ async fn handle_gettxs_request(
     let resp = processor.read().await.chain.transmit_txs()?;
     send.write_all(&resp).await?;
     send.finish()?;
+    Ok(())
+}
+
+async fn handle_newblock_request(
+    mut send: quinn::SendStream,
+    mut recv: quinn::RecvStream,
+    processor: Arc<RwLock<Processor>>,
+    archiver_notify: Arc<Notify>,
+) -> Result<()> {
+    // let resp = processor.read().await.chain.transmit_txs()?;
+    // send.write_all(&resp).await?;
+    // send.finish()?;
+
+    // let connection = connect_to_server().await?;
+    // let new_blocks_ready = Arc::new(Notify::new());
+    // === Register for notifications
+    // let (mut notify_send, mut notify_recv) = connection.open_bi().await?;
+    // Send the string required by server
+    // notify_send.write_all(b"ANTIFY").await?;
+    // notify_send.finish()?;
+
+    // let new_blocks_ready_clone = new_blocks_ready.clone();
+    // tokio::spawn(async move {
+    //     let mut buf = [0u8; 1024];
+    //     while let Ok(Some(_n)) = notify_recv.read(&mut buf).await {
+    //         // println!("got notification: {:?}", &buf[..n]);
+    //         new_blocks_ready_clone.notify_one();
+    //         // act based on content, maybe open a REQUES stream here
+    //     }
+    // });
+    // println!("sending sndblk");
+    send.write_all(b"sndblk").await?;
+    send.finish()?;
+
+    let resp = recv.read_to_end(usize::MAX).await?;
+    processor
+        .write()
+        .await
+        .chain
+        .add_received_blocks(resp, Some(archiver_notify))?;
+
     Ok(())
 }
 
@@ -454,22 +528,81 @@ async fn process_get(
 }
 
 // Notify the connected clients that a new block is ready.
-pub async fn broadcast_notification(clients: NotificationClients, message: &[u8], role: Roles) {
+pub async fn broadcast_notification_to_validators(
+    clients: NotificationClients,
+    message: &[u8],
+    // role: Roles
+) {
     let mut clients_lock = clients.lock().await;
 
-    let mut i = 0;
-    while i < clients_lock.len() {
-        let clients_vec = match role {
-            Roles::Archiver => todo!(),
-            Roles::Validator => todo!(),
-            Roles::Receiver => clients_lock.get_mut("validator").expect("All good"),
-        };
-        let result = clients_vec[i].write_all(message).await;
-        if result.is_err() {
-            eprintln!("client disconnected: {:?}", result.err());
-            clients_vec.remove(i);
-        } else {
-            i += 1;
+    let clients_vec = clients_lock.get_mut("validator");
+    // match role {
+    //         Roles::Archiver => todo!(),
+    //         Roles::Validator => todo!(),
+    //         Roles::Receiver => {
+    //             // A receiver is notifying a validator that transactions are ready
+    // clients_lock.get_mut("validator")
+    //         },
+    //     }
+    // ;
+    if let Some(clients_vec) = clients_vec {
+        // println!("Found validators: {clients_vec:?}");
+        let mut i = 0;
+        while i < clients_vec.len() {
+            // let clients_vec = match role {
+            //     Roles::Archiver => todo!(),
+            //     Roles::Validator => todo!(),
+            //     Roles::Receiver => clients_lock.get_mut("validator").expect("All good"),
+            // };
+            // index oob
+            let result = clients_vec[i].write_all(message).await;
+            if result.is_err() {
+                eprintln!("client disconnected: {:?}", result.err());
+                clients_vec.remove(i);
+            } else {
+                i += 1;
+            }
+        }
+    }
+}
+
+// Notify the connected clients that a new block is ready.
+pub async fn broadcast_notification_to_archivers(
+    clients: NotificationClients,
+    message: &[u8],
+    // role: Roles
+) {
+    let mut clients_lock = clients.lock().await;
+
+    let clients_vec = clients_lock.get_mut("archiver");
+    // match role {
+    //         Roles::Archiver => todo!(),
+    //         Roles::Validator => todo!(),
+    //         Roles::Receiver => {
+    // A receiver is notifying a validator that transactions are ready
+    // clients_lock.get_mut("archiver")
+    //     },
+    // }
+    // ;
+
+    // println!("Found archivers: {clients_vec:?}");
+    if let Some(clients_vec) = clients_vec {
+        let mut i = 0;
+        // println!("clients_vec: {:?}", clients_vec.len());
+        while i < clients_vec.len() {
+            // let clients_vec = match role {
+            //     Roles::Archiver => todo!(),
+            //     Roles::Validator => todo!(),
+            //     Roles::Receiver => clients_lock.get_mut("validator").expect("All good"),
+            // };
+            // index oob
+            let result = clients_vec[i].write_all(message).await;
+            if result.is_err() {
+                eprintln!("client disconnected: {:?}", result.err());
+                clients_vec.remove(i);
+            } else {
+                i += 1;
+            }
         }
     }
 }
