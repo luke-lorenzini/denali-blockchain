@@ -1,15 +1,12 @@
 use anyhow::Result;
-use borsh::{BorshDeserialize, BorshSerialize};
+use borsh::{BorshDeserialize, BorshSerialize, to_vec};
 use chrono::Utc;
 use hex::encode;
 use log::trace;
 use sha2::{Digest, Sha256};
-use tokio::{
-    sync::{
-        mpsc::{Receiver, Sender},
-        oneshot,
-    },
-    time::{Duration, sleep},
+use tokio::sync::{
+    mpsc::{Receiver, Sender},
+    oneshot,
 };
 
 use crate::{constants::BATCH_SIZE, types::H256};
@@ -29,50 +26,12 @@ pub struct ResponseRx {
     pub tx_id: H256,
 }
 
-pub async fn message_generator_task(tx: Sender<(String, String, Meta)>) -> Result<()> {
-    let mut flag = 0;
-
-    loop {
-        sleep(Duration::from_millis(100)).await;
-
-        let payload;
-        let program;
-        if flag == 0 {
-            flag = 1;
-            // A fake - working
-            payload = r#"
-                {
-                    "fake": 0
-                }"#;
-            program = "fake";
-        } else if flag == 1 {
-            flag = 2;
-            // A bank
-            payload = r#"
-                {
-                    "payer": 0,
-                    "payee": 1,
-                    "amount": 10.0
-                }"#;
-            program = "bank";
-        } else {
-            flag = 0;
-            // A vote - working
-            payload = r#"
-                {
-                    "candidate": "candidate1"
-                }"#;
-            program = "vote";
-        }
-
-        tx.send((program.into(), payload.into(), Meta {})).await?;
-    }
-}
-
 #[tracing::instrument]
 pub async fn receiver_task(
-    tx_msg_queue: Sender<Vec<(H256, String, String, Meta)>>,
+    // tx_msg_queue: Sender<Vec<(H256, String, String, Meta)>>,
+    tx_batch_queue: Sender<Vec<u8>>,
     mut rx: Receiver<ResponseTx>,
+    // notify: Arc<Notify>,
 ) -> Result<()> {
     let mut transactions = Vec::new();
 
@@ -95,7 +54,9 @@ pub async fn receiver_task(
         transactions.push((tx_id, i.program, i.payload, i.metadata));
         if transactions.len() == BATCH_SIZE {
             let batch = std::mem::take(&mut transactions);
-            tx_msg_queue.send(batch).await?;
+            let batch = to_vec(&batch).unwrap();
+            tx_batch_queue.send(batch).await?;
+            // notify.notify_one();
         }
     }
 

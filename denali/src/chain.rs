@@ -114,10 +114,11 @@ pub struct Chain {
     count: u32,
     pub state: Arc<State>,
     tip: Option<H256>,
+    temp_txs: Option<Vec<u8>>,
 }
 
 impl Chain {
-    pub(crate) fn new(replica: bool) -> Result<Self> {
+    pub(crate) fn new(replica: bool, notify: Arc<Notify>) -> Result<Self> {
         let mut blocks = HashMap::new();
         let state = Arc::new(State::new());
         let tip = if replica {
@@ -126,6 +127,7 @@ impl Chain {
             let genesis = Block::genesis();
             let tip = genesis.block_hash;
             blocks.insert(tip, genesis);
+            notify.notify_one();
             Some(tip)
         };
         Ok(Self {
@@ -133,6 +135,7 @@ impl Chain {
             blocks,
             state,
             tip,
+            temp_txs: None,
         })
     }
 
@@ -149,8 +152,9 @@ impl Chain {
             count,
             state,
             tip: None,
+            temp_txs: None,
         };
-        chain.add_received_blocks(encoded_blocks)?;
+        chain.add_received_blocks(encoded_blocks, None)?;
         Ok(chain)
     }
 
@@ -176,13 +180,27 @@ impl Chain {
 
         // notify
         if let Some(notify) = notify {
+            // println!("add_next_block: notify");
             notify.notify_one();
         }
 
         Ok(())
     }
 
-    pub fn add_received_blocks(&mut self, encoded_blocks: Vec<u8>) -> Result<bool> {
+    pub fn get_latest_block(&self) -> Result<Vec<u8>> {
+        let block = self.blocks.get(&self.get_tip()?).unwrap();
+        // println!("block: {block:?}");
+        let block_vec = vec![block];
+        let serialized_block = to_vec(&block_vec)?;
+        // println!("serialized block: {block_vec:?}");
+        Ok(serialized_block)
+    }
+
+    pub fn add_received_blocks(
+        &mut self,
+        encoded_blocks: Vec<u8>,
+        notify: Option<Arc<Notify>>,
+    ) -> Result<bool> {
         let decoded_blocks: Vec<Block> = from_slice(&encoded_blocks)?;
         for decoded_block in decoded_blocks {
             trace!("add_received_blocks block: {decoded_block:?}");
@@ -190,6 +208,13 @@ impl Chain {
             self.blocks.insert(self.get_tip()?, decoded_block);
             self.count += 1;
         }
+
+        // notify
+        if let Some(notify) = notify {
+            // println!("add_received_blocks: notify");
+            notify.notify_one();
+        }
+
         Ok(true)
     }
 
@@ -252,6 +277,19 @@ impl Chain {
         Ok(result)
     }
 
+    pub fn set_txs(&mut self, temp_txs: &[u8]) {
+        self.temp_txs = Some(temp_txs.to_owned());
+    }
+
+    pub fn transmit_txs(&self) -> Result<Vec<u8>> {
+        if self.temp_txs.is_none() {
+            bail!("No transactions ready");
+        } else {
+            let temp = self.temp_txs.clone().expect("Already checked");
+            Ok(temp)
+        }
+    }
+
     pub fn transmit_blocks(&self, block_hash: Option<&H256>) -> Result<Option<Vec<u8>>> {
         if block_hash.is_some() && block_hash.unwrap() == self.tip.as_ref().unwrap() {
             // client is already at the latest, maybe return Ok<None>
@@ -275,13 +313,15 @@ impl Chain {
                 }
             }
             None => {
+                // todo fix the bug
                 while block.header.previous_block_hash != H256::zero() {
                     block = self.blocks.get(&block.header.previous_block_hash).unwrap();
                     result.push(block);
                 }
-                // Ensure we don't add the genisis block twice
+                // Ensure we don't add the genesis block twice
                 if self.count != 1 {
                     // Add the genesis block.
+                    // todo Receiver does not contain the genesis block, so crash
                     block = self.blocks.get(&H256::zero()).unwrap();
                     result.push(block);
                 }
@@ -312,36 +352,40 @@ mod test {
 
     #[test]
     fn test_transmit_block_at_same_point() {
+        let notify = Arc::new(Notify::new());
         let block_hash = H256::zero();
-        let chain = Chain::new(false).unwrap();
+        let chain = Chain::new(false, notify).unwrap();
         let res = chain.transmit_blocks(Some(&block_hash)).unwrap();
         assert!(res.is_none())
     }
 
     #[test]
-    fn test_transmit_block_gensis_only() {
-        let chain = Chain::new(false).unwrap();
+    fn test_transmit_block_genesis_only() {
+        let notify = Arc::new(Notify::new());
+        let chain = Chain::new(false, notify.clone()).unwrap();
         let res = chain.transmit_blocks(None).unwrap();
         assert!(res.is_some());
-        let mut chain2 = Chain::new(true).unwrap();
-        let res = chain2.add_received_blocks(res.unwrap());
+        let mut chain2 = Chain::new(true, notify).unwrap();
+        let res = chain2.add_received_blocks(res.unwrap(), None);
         assert!(res.is_ok());
         assert_eq!(chain2.get_height(), 1)
     }
 
     #[test]
     fn test_transmit_block_non_existent() {
+        let notify = Arc::new(Notify::new());
         let block_hash =
             H256::try_from("66687aadf862bd776c8fc18b8e9f8e20089714856ee233b3902a591d0d5f2925")
                 .unwrap();
-        let chain = Chain::new(false).unwrap();
+        let chain = Chain::new(false, notify).unwrap();
         let res = chain.transmit_blocks(Some(&block_hash));
         assert!(res.is_err())
     }
 
     #[test]
     fn test_transmit_block_has_genesis() {
-        let mut chain = Chain::new(false).unwrap();
+        let notify = Arc::new(Notify::new());
+        let mut chain = Chain::new(false, notify).unwrap();
         let merkle_tree_root =
             H256::try_from("66687aadf862bd776c8fc18b8e9f8e20089714856ee233b3902a591d0d5f2925")
                 .unwrap();
@@ -361,7 +405,8 @@ mod test {
 
     #[test]
     fn test_transmit_block_from_scratch() {
-        let mut chain = Chain::new(false).unwrap();
+        let notify = Arc::new(Notify::new());
+        let mut chain = Chain::new(false, notify).unwrap();
         let merkle_tree_root =
             H256::try_from("66687aadf862bd776c8fc18b8e9f8e20089714856ee233b3902a591d0d5f2925")
                 .unwrap();
@@ -381,8 +426,9 @@ mod test {
 
     #[test]
     fn test_add_received_blocks() {
+        let notify = Arc::new(Notify::new());
         // Create a host chain with two additional blocks.
-        let mut host_chain = Chain::new(false).unwrap();
+        let mut host_chain = Chain::new(false, notify.clone()).unwrap();
         let merkle_tree_root =
             H256::try_from("66687aadf862bd776c8fc18b8e9f8e20089714856ee233b3902a591d0d5f2925")
                 .unwrap();
@@ -404,11 +450,11 @@ mod test {
         assert_eq!(host_chain.get_height(), 4);
 
         // Create a client chain.
-        let mut client_chain = Chain::new(true).unwrap();
+        let mut client_chain = Chain::new(true, notify).unwrap();
         let encoded_block = host_chain.transmit_blocks(None).unwrap();
         assert!(encoded_block.is_some());
         let res = client_chain
-            .add_received_blocks(encoded_block.unwrap())
+            .add_received_blocks(encoded_block.unwrap(), None)
             .unwrap();
         assert!(res);
         // Genesis plus new blocks.
@@ -429,16 +475,17 @@ mod test {
 
     #[test]
     fn test_add_received_blocks_genesis_only() {
+        let notify = Arc::new(Notify::new());
         // Create a host chain with two additional blocks.
-        let host_chain = Chain::new(false).unwrap();
+        let host_chain = Chain::new(false, notify.clone()).unwrap();
         assert_eq!(host_chain.get_height(), 1);
 
         // Create a client chain.
-        let mut client_chain = Chain::new(true).unwrap();
+        let mut client_chain = Chain::new(true, notify).unwrap();
         let encoded_block = host_chain.transmit_blocks(None).unwrap();
         assert!(encoded_block.is_some());
         let res = client_chain
-            .add_received_blocks(encoded_block.unwrap())
+            .add_received_blocks(encoded_block.unwrap(), None)
             .unwrap();
         assert!(res);
         // Genesis plus new blocks.
@@ -472,14 +519,16 @@ mod test {
 
     #[test]
     fn test_new_chain() {
-        let chain = Chain::new(false).unwrap();
+        let notify = Arc::new(Notify::new());
+        let chain = Chain::new(false, notify).unwrap();
         let expected = 1;
         assert_eq!(chain.get_height(), expected)
     }
 
     #[test]
     fn test_new_chain_from_default() {
-        let chain = Chain::new(false).unwrap();
+        let notify = Arc::new(Notify::new());
+        let chain = Chain::new(false, notify).unwrap();
         let expected = 1;
         assert_eq!(chain.count, expected)
     }
@@ -493,11 +542,12 @@ mod test {
 
     #[test]
     fn test_get_chain_hash() {
-        let server_chain = Chain::new(false).unwrap();
+        let notify = Arc::new(Notify::new());
+        let server_chain = Chain::new(false, notify.clone()).unwrap();
         let server_hash = server_chain.get_chain_hash().unwrap();
-        let mut client_chain = Chain::new(true).unwrap();
+        let mut client_chain = Chain::new(true, notify).unwrap();
         let encoded_blocks = server_chain.transmit_blocks(None).unwrap().unwrap();
-        let _ = client_chain.add_received_blocks(encoded_blocks);
+        let _ = client_chain.add_received_blocks(encoded_blocks, None);
         let client_hash = client_chain.get_chain_hash().unwrap();
         assert_eq!(server_hash, client_hash)
     }
@@ -516,7 +566,8 @@ mod test {
 
     #[test]
     fn test_add_next_block() {
-        let mut chain = Chain::new(false).unwrap();
+        let notify = Arc::new(Notify::new());
+        let mut chain = Chain::new(false, notify).unwrap();
         chain
             .add_next_block(H256::zero(), HashMap::new(), None)
             .unwrap();
@@ -526,7 +577,8 @@ mod test {
     #[ignore = "mock sys time"]
     #[test]
     fn test_get_block_hash() {
-        let chain = Chain::new(false).unwrap();
+        let notify = Arc::new(Notify::new());
+        let chain = Chain::new(false, notify).unwrap();
         let res = chain.get_block_hash().to_owned();
         let expected = H256::new([
             222, 71, 201, 178, 126, 184, 211, 0, 219, 181, 242, 195, 83, 230, 50, 195, 147, 38, 44,

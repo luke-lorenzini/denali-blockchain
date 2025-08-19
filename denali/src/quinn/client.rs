@@ -8,7 +8,8 @@ use std::{
     sync::Arc,
 };
 
-use anyhow::Result;
+use anyhow::{Result, bail};
+use borsh::from_slice;
 use log::{error, info};
 use quinn::Connection;
 use quinn_proto::crypto::rustls::QuicClientConfig;
@@ -17,10 +18,15 @@ use rustls::pki_types::{
     // PrivateKeyDer,
     // PrivatePkcs8KeyDer
 };
-use tokio::sync::{Notify, RwLock};
+use tokio::sync::{Notify, RwLock, mpsc::Sender};
 use url::Url;
 
-use crate::{processor::Processor, quinn::ALPN_QUIC_HTTP};
+use crate::{
+    messaging::Meta,
+    processor::Processor,
+    quinn::{ALPN_QUIC_HTTP, Roles},
+    types::H256,
+};
 
 // todo: clean me!
 pub async fn quinn_one_shot_sync(port_number: u16) -> Result<(Vec<u8>, Vec<u8>)> {
@@ -83,7 +89,13 @@ pub async fn quinn_one_shot_sync(port_number: u16) -> Result<(Vec<u8>, Vec<u8>)>
     Ok((encoded_state, encoded_blocks))
 }
 
-pub async fn start_quinn_client(processor: Arc<RwLock<Processor>>, port_number: u16) -> Result<()> {
+pub async fn start_quinn_client(
+    processor: Arc<RwLock<Processor>>,
+    port_number: u16,
+    role: Roles,
+    tx_msg_queue: Sender<Vec<(H256, String, String, Meta)>>,
+    txs_processed: Option<Arc<Notify>>,
+) -> Result<()> {
     // Luke - start
     rustls::crypto::ring::default_provider()
         .install_default()
@@ -141,7 +153,7 @@ pub async fn start_quinn_client(processor: Arc<RwLock<Processor>>, port_number: 
     // new stuff
     let host = url_host;
     let conn = endpoint.connect(remote, host)?.await?;
-    connect_and_listen(conn, processor).await?;
+    connect_and_listen(conn, processor, role, tx_msg_queue, txs_processed).await?;
 
     // Start July 21
     // // let request = format!("NOTIFY {}\r\n", url.path());
@@ -233,68 +245,150 @@ pub async fn start_quinn_client(processor: Arc<RwLock<Processor>>, port_number: 
     Ok(())
 }
 
-async fn _connect_to_server() -> Result<Connection> {
-    let socket = SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), 4434);
-    let url = "https://localhost:4433/test.txt";
-    let url = Url::try_from(url)?;
-    let url_host = strip_ipv6_brackets(url.host_str().unwrap());
-    let host = url_host;
-    let endpoint = quinn::Endpoint::client(socket)?;
-    let remote = (url_host, url.port().unwrap_or(4433))
-        .to_socket_addrs()?
-        .next()
-        .unwrap();
-    let conn = endpoint.connect(remote, host)?.await?;
-    Ok(conn)
-}
-
 async fn connect_and_listen(
     connection: Connection,
     processor: Arc<RwLock<Processor>>,
+    role: Roles,
+    tx_msg_queue: Sender<Vec<(H256, String, String, Meta)>>,
+    txs_processed: Option<Arc<Notify>>,
 ) -> Result<()> {
-    // let connection = connect_to_server().await?;
-    let notify = Arc::new(Notify::new());
-    // === Register for notifications
-    let (mut notify_send, mut notify_recv) = connection.open_bi().await?;
-    // Send the string required by server
-    notify_send.write_all(b"NOTIFY").await?;
-    notify_send.finish()?;
-    println!("Notified server");
+    match role {
+        Roles::Archiver => {
+            // let connection = connect_to_server().await?;f
+            let new_blocks_ready = Arc::new(Notify::new());
+            // === Register for notifications
+            let (mut notify_send, mut notify_recv) = connection.open_bi().await?;
+            // Send the string required by server
+            notify_send.write_all(b"ANTIFY").await?;
+            notify_send.finish()?;
 
-    let notify_clone = notify.clone();
-    tokio::spawn(async move {
-        let mut buf = [0u8; 1024];
-        while let Ok(Some(_n)) = notify_recv.read(&mut buf).await {
-            // println!("got notification: {:?}", &buf[..n]);
-            notify_clone.notify_one();
-            // act based on content, maybe open a REQUES stream here
+            let new_blocks_ready_clone = new_blocks_ready.clone();
+            tokio::spawn(async move {
+                let mut buf = [0u8; 1024];
+                while let Ok(Some(_n)) = notify_recv.read(&mut buf).await {
+                    // println!("got notification: {:?}", &buf[..n]);
+                    new_blocks_ready_clone.notify_one();
+                    // act based on content, maybe open a REQUES stream here
+                }
+            });
+
+            let (mut send, mut recv) = connection.open_bi().await?;
+            send.write_all(b"SYNCRO").await?;
+            send.finish()?;
+            let resp = recv.read_to_end(usize::MAX).await?;
+            processor
+                .write()
+                .await
+                .chain
+                .add_received_blocks(resp, None)?;
+            // === Later, issue requests
+            loop {
+                new_blocks_ready.notified().await;
+                // println!("notified!");
+                // Example: request new block
+                let (mut send, mut recv) = connection.open_bi().await?;
+                // send.write_all(b"REQUES").await?;
+                // send.write_all(b"GET NEW BLOCK\n").await?;
+                // read response if needed
+                let tip = processor.read().await.chain.get_tip();
+                // let payload = format!("UPDATE{}", tip);
+                // println!("{payload:?}");
+                send.write_all(b"UPDATE").await?;
+                send.write_all(tip.unwrap().as_ref()).await?;
+                send.finish()?;
+                let resp = recv.read_to_end(usize::MAX).await?;
+                processor
+                    .write()
+                    .await
+                    .chain
+                    .add_received_blocks(resp, None)?;
+            }
+            // Ok(())
         }
-    });
+        // Validator gets a internally notified when a new block is ready.
+        Roles::Validator => {
+            // let connection = connect_to_server().await?;
+            let notify = Arc::new(Notify::new());
+            // === Register for notifications
+            let (mut notify_send, mut notify_recv) = connection.open_bi().await?;
+            // Send the string required by server
+            notify_send.write_all(b"VNTIFY").await?;
+            notify_send.finish()?;
 
-    let (mut send, mut recv) = connection.open_bi().await?;
-    send.write_all(b"SYNCRO").await?;
-    send.finish()?;
-    let resp = recv.read_to_end(usize::MAX).await?;
-    processor.write().await.chain.add_received_blocks(resp)?;
-    // === Later, issue requests
-    loop {
-        notify.notified().await;
-        // println!("notified!");
-        // Example: request new block
-        let (mut send, mut recv) = connection.open_bi().await?;
-        // send.write_all(b"REQUES").await?;
-        // send.write_all(b"GET NEW BLOCK\n").await?;
-        // read response if needed
-        let tip = processor.read().await.chain.get_tip();
-        // let payload = format!("UPDATE{}", tip);
-        // println!("{payload:?}");
-        send.write_all(b"UPDATE").await?;
-        send.write_all(tip.unwrap().as_ref()).await?;
-        send.finish()?;
-        let resp = recv.read_to_end(usize::MAX).await?;
-        processor.write().await.chain.add_received_blocks(resp)?;
+            let notify_clone = notify.clone();
+            tokio::spawn(async move {
+                let mut buf = [0u8; 1024];
+                // get notifed externally by the receiver that new txs are ready
+                while let Ok(Some(_n)) = notify_recv.read(&mut buf).await {
+                    notify_clone.notify_one();
+                    // act based on content, maybe open a REQUES stream here
+                }
+            });
+
+            // let (mut send, mut recv) = connection.open_bi().await?;
+            // send.write_all(b"GETTXS").await?;
+            // send.finish()?;
+            // let resp = recv.read_to_end(usize::MAX).await?;
+            // processor.write().await.chain.add_received_blocks(resp)?;
+            // === Later, issue requests
+            let connection_clone = connection.clone();
+            let processor_clone = processor.clone();
+            tokio::spawn(async move {
+                loop {
+                    notify.notified().await;
+                    // println!("notified!");
+                    // Example: request new block
+                    let (mut send, mut recv) = connection_clone.open_bi().await.unwrap();
+                    // send.write_all(b"REQUES").await?;
+                    // send.write_all(b"GET NEW BLOCK\n").await?;
+                    // read response if needed
+                    let tip = processor_clone.read().await.chain.get_tip();
+                    // let payload = format!("UPDATE{}", tip);
+                    // println!("{payload:?}");
+                    send.write_all(b"GETTXS").await.unwrap();
+                    send.write_all(tip.unwrap().as_ref()).await.unwrap();
+                    send.finish().unwrap();
+
+                    let transactions = recv.read_to_end(usize::MAX).await.unwrap();
+                    // let batch = std::mem::take(&mut transactions);
+                    let txs = from_slice(&transactions).unwrap();
+                    tx_msg_queue.send(txs).await.unwrap();
+                    // println!("got txs: {txs:?}");
+                }
+            });
+
+            if let Some(txs_processed) = txs_processed {
+                loop {
+                    txs_processed.notified().await;
+                    // println!("Block Finalized!");
+                    let (mut send, mut recv) = connection.open_bi().await?;
+                    send.write_all(b"NEWBLK").await?;
+                    // send.finish()?;
+
+                    // Wait for server to respond 'ready'
+                    // let transactions = recv.read_to_end(usize::MAX).await.unwrap();
+                    // if transactions.first() == 'y' {
+
+                    // }
+                    let mut tag = [0u8; 6];
+                    if let Err(_e) = recv.read_exact(&mut tag).await {}
+                    // println!("{tag:?}");
+                    if &tag == b"sndblk" {
+                        // Send new block
+                        let block = processor.read().await.chain.get_latest_block().unwrap();
+                        send.write_all(&block).await?;
+                        send.finish()?;
+                        // println!("sent block: {block:?}");
+                    } else {
+                        // received a response we weren't expecting
+                        todo!()
+                    }
+                }
+            }
+            Ok(())
+        }
+        _ => bail!("Receiver cannot be a client"),
     }
-    // Ok(())
 }
 
 fn strip_ipv6_brackets(host: &str) -> &str {

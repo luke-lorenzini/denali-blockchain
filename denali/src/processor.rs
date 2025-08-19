@@ -29,12 +29,12 @@ pub struct Processor {
 }
 
 impl Processor {
-    pub async fn new(replica: bool, validator_restart: bool) -> Result<Self> {
+    pub async fn new(replica: bool, validator_restart: bool, notify: Arc<Notify>) -> Result<Self> {
         let chain = if validator_restart {
             let (encoded_state, encoded_blocks) = quinn_one_shot_sync(4435).await?;
             Chain::new_restarted_validator(encoded_state, encoded_blocks)?
         } else {
-            Chain::new(replica)?
+            Chain::new(replica, notify)?
         };
         Ok(Processor { chain })
     }
@@ -92,6 +92,11 @@ impl Processor {
         Ok(res)
     }
 
+    pub async fn receive_batch_txs(&mut self, txs: &[u8], notify: Arc<Notify>) {
+        self.chain.set_txs(txs);
+        notify.notify_one();
+    }
+
     // Process a batch of transactions
     pub async fn create_new_block(
         &mut self,
@@ -132,13 +137,15 @@ mod test {
 
     #[tokio::test]
     async fn test_new_chain_from_default() {
-        let processor = Processor::new(false, false).await.unwrap();
+        let notify = Arc::new(Notify::new());
+        let processor = Processor::new(false, false, notify).await.unwrap();
         assert_eq!(processor.chain.get_height(), 1)
     }
 
     #[tokio::test]
     async fn test_new_chain_get_height() {
-        let processor = Processor::new(false, false).await.unwrap();
+        let notify = Arc::new(Notify::new());
+        let processor = Processor::new(false, false, notify).await.unwrap();
         assert_eq!(processor.get_height(), 1)
     }
 
@@ -170,8 +177,9 @@ mod test {
 
     #[tokio::test]
     async fn test_create_new_block() {
+        let notify = Arc::new(Notify::new());
         let messages = vec![];
-        let mut processor = Processor::new(false, false).await.unwrap();
+        let mut processor = Processor::new(false, false, notify).await.unwrap();
         processor.create_new_block(&messages, None).await.unwrap();
     }
 }
