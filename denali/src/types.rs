@@ -151,7 +151,7 @@ mod test {
             102, 104, 122, 173, 248, 98, 189, 119, 108, 143, 193, 139, 142, 159, 142, 32, 8, 151,
             20, 133, 110, 226, 51, 179, 144, 42, 89, 29, 13, 95, 41, 37,
         ]);
-        let res: String = val.try_into().unwrap();
+        let res: String = val.into();
         let expected =
             String::from("66687aadf862bd776c8fc18b8e9f8e20089714856ee233b3902a591d0d5f2925");
         assert_eq!(res, expected)

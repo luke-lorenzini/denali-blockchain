@@ -111,16 +111,16 @@ mod test {
             "candidate": "0"
         }"#;
         let state = Arc::new(State::new());
-        let _res = vote_program(&payload, state.clone()).await;
-        let _res = vote_program(&payload, state.clone()).await;
+        let _res = vote_program(payload, state.clone()).await;
+        let _res = vote_program(payload, state.clone()).await;
         let payload = r#"
         {
             "candidate": "1"
         }"#;
-        let _res = vote_program(&payload, state.clone()).await;
-        let _res = vote_program(&payload, state.clone()).await;
-        let _res = vote_program(&payload, state.clone()).await;
-        let _res = vote_program(&payload, state).await;
+        let _res = vote_program(payload, state.clone()).await;
+        let _res = vote_program(payload, state.clone()).await;
+        let _res = vote_program(payload, state.clone()).await;
+        let _res = vote_program(payload, state).await;
     }
 
     #[test]

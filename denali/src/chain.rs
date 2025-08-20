@@ -348,6 +348,9 @@ impl Chain {
 
 #[cfg(test)]
 mod test {
+    use futures::join;
+    use tokio::{spawn, sync::oneshot::channel};
+
     use super::*;
 
     #[test]
@@ -574,6 +577,41 @@ mod test {
         assert_eq!(chain.count, 2)
     }
 
+    #[tokio::test]
+    async fn test_add_next_block_and_notify() {
+        let (tx, mut rx) = channel();
+        let notify = Arc::new(Notify::new());
+        let mut chain = Chain::new(false, notify.clone()).unwrap();
+
+        let notify_clone = notify.clone();
+        let first_notification = spawn(async move {
+            notify_clone.notified().await;
+            println!("notified once");
+            tx.send(true).unwrap();
+        });
+
+        let _res = join!(first_notification);
+        let rx = rx.try_recv().unwrap();
+        assert!(rx);
+
+        chain
+            .add_next_block(H256::zero(), HashMap::new(), Some(notify.clone()))
+            .unwrap();
+        assert_eq!(chain.count, 2);
+
+        let (tx, mut rx) = channel();
+        let notify_clone = notify.clone();
+        let second_notification = spawn(async move {
+            notify_clone.notified().await;
+            tx.send(true).unwrap();
+        });
+
+        let _res = join!(second_notification);
+
+        let rx = rx.try_recv().unwrap();
+        assert!(rx)
+    }
+
     #[ignore = "mock sys time"]
     #[test]
     fn test_get_block_hash() {
@@ -585,5 +623,24 @@ mod test {
             240, 99, 64, 196, 250, 127, 27, 64, 196, 203, 211, 111, 144,
         ]);
         assert_eq!(res, expected)
+    }
+
+    #[test]
+    fn test_is_block() {
+        let notify = Arc::new(Notify::new());
+        let chain = Chain::new(false, notify).unwrap();
+        let block_hash = H256::zero();
+        let res = chain.is_block(block_hash);
+        assert!(res)
+    }
+
+    #[test]
+    fn test_transmit_state() {
+        let notify = Arc::new(Notify::new());
+        let chain = Chain::new(false, notify).unwrap();
+        let res = chain.transmit_state().unwrap();
+        let state: Vec<(String, Vec<u8>)> = from_slice(&res).unwrap();
+        let _state: State = state.try_into().unwrap();
+        // todo: add a test here
     }
 }
