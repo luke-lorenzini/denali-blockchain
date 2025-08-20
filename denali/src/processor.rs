@@ -133,6 +133,8 @@ impl Processor {
 
 #[cfg(test)]
 mod test {
+    use tokio::{join, spawn, sync::oneshot::channel};
+
     use super::*;
 
     #[tokio::test]
@@ -181,5 +183,38 @@ mod test {
         let messages = vec![];
         let mut processor = Processor::new(false, false, notify).await.unwrap();
         processor.create_new_block(&messages, None).await.unwrap();
+    }
+
+    #[tokio::test]
+    async fn test_receive_batch_txs() {
+        let notify = Arc::new(Notify::new());
+        let txs = vec![];
+        let mut processor = Processor::new(false, false, notify.clone()).await.unwrap();
+
+        let (tx, mut rx) = channel();
+        let notify_clone = notify.clone();
+        let notification_task = spawn(async move {
+            notify_clone.notified().await;
+            tx.send(true).unwrap();
+        });
+
+        let _res = join!(notification_task);
+
+        processor.receive_batch_txs(&txs, notify.clone()).await;
+
+        let rx = rx.try_recv().unwrap();
+        assert!(rx);
+
+        let (tx, mut rx) = channel();
+        let notify_clone = notify.clone();
+        let notification_task = spawn(async move {
+            notify_clone.notified().await;
+            tx.send(true).unwrap();
+        });
+
+        let _res = join!(notification_task);
+
+        let rx = rx.try_recv().unwrap();
+        assert!(rx)
     }
 }
