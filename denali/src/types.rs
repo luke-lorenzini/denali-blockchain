@@ -1,0 +1,208 @@
+use std::{
+    fmt::{Debug, Display},
+    sync::Arc,
+};
+
+use anyhow::{Error, Result, anyhow, bail};
+use async_trait::async_trait;
+use borsh::{BorshDeserialize, BorshSerialize};
+use derive_more::AsRef;
+use hex::{decode, encode};
+use semver::Version;
+use serde::{Deserialize, Serialize};
+use serde_json::Value;
+
+use crate::storage::State;
+
+#[derive(
+    AsRef,
+    BorshDeserialize,
+    BorshSerialize,
+    Clone,
+    Copy,
+    Debug,
+    Eq,
+    Hash,
+    Ord,
+    PartialEq,
+    PartialOrd,
+)]
+pub struct H256([u8; 32]);
+
+impl H256 {
+    pub fn new(inner: [u8; 32]) -> Self {
+        H256(inner)
+    }
+
+    pub fn dummy() -> Self {
+        Self([0u8; 32])
+    }
+
+    pub fn zero() -> Self {
+        Self([0u8; 32])
+    }
+
+    // pub fn random() -> Self {
+    //     todo!()
+    // }
+}
+
+impl Display for H256 {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "0x{}", encode(self.0))
+    }
+}
+
+impl TryFrom<String> for H256 {
+    type Error = Error;
+
+    fn try_from(value: String) -> Result<Self, Self::Error> {
+        let decoded = decode(value)?;
+        let inner = decoded
+            .try_into()
+            .map_err(|e| anyhow!("decode failed: {e:?}"))?;
+        Ok(Self(inner))
+    }
+}
+
+impl TryFrom<Vec<u8>> for H256 {
+    type Error = Error;
+
+    fn try_from(value: Vec<u8>) -> Result<Self, Self::Error> {
+        if value.len() == 32 {
+            Ok(H256::new(value.try_into().expect("Already checked")))
+        } else {
+            bail!("Invalid length")
+        }
+    }
+}
+
+impl From<H256> for String {
+    fn from(value: H256) -> Self {
+        encode(value.0)
+    }
+}
+
+impl TryFrom<&str> for H256 {
+    type Error = Error;
+
+    fn try_from(value: &str) -> Result<Self, Self::Error> {
+        let inner: [u8; 32] = decode(value)?
+            .try_into()
+            .map_err(|e| anyhow!("Failed to decode {e:?}"))?;
+        Ok(Self(inner))
+    }
+}
+
+#[async_trait]
+pub trait Thing: Send + Sync + ThingClone {
+    fn name(&self) -> &'static str;
+    fn version(&self) -> Result<Version>;
+    fn verify(&self) -> Result<bool>;
+    async fn run(&self, payload: &str, state: Arc<State>) -> Result<(bool, Vec<String>)>;
+}
+
+pub trait ThingClone {
+    fn clone_box(&self) -> Box<dyn Thing + Send + Sync>;
+}
+
+impl<T> ThingClone for T
+where
+    T: Thing + Clone + Send + Sync + 'static,
+{
+    fn clone_box(&self) -> Box<dyn Thing + Send + Sync> {
+        Box::new(self.clone())
+    }
+}
+
+impl Debug for dyn Thing {
+    fn fmt(&self, _f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        todo!()
+    }
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct Params {
+    pub program: String,
+    pub payload: Value,
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    use hex::encode;
+
+    #[test]
+    fn test_display() {
+        let val = H256::new([
+            102, 104, 122, 173, 248, 98, 189, 119, 108, 143, 193, 139, 142, 159, 142, 32, 8, 151,
+            20, 133, 110, 226, 51, 179, 144, 42, 89, 29, 13, 95, 41, 37,
+        ]);
+        let res = val.to_string();
+        assert_eq!(
+            res,
+            "0x66687aadf862bd776c8fc18b8e9f8e20089714856ee233b3902a591d0d5f2925"
+        )
+    }
+
+    #[test]
+    fn test_from_h256() {
+        let val = H256::new([
+            102, 104, 122, 173, 248, 98, 189, 119, 108, 143, 193, 139, 142, 159, 142, 32, 8, 151,
+            20, 133, 110, 226, 51, 179, 144, 42, 89, 29, 13, 95, 41, 37,
+        ]);
+        let res: String = val.into();
+        let expected =
+            String::from("66687aadf862bd776c8fc18b8e9f8e20089714856ee233b3902a591d0d5f2925");
+        assert_eq!(res, expected)
+    }
+
+    #[test]
+    fn test_from_string() {
+        let val = String::from("66687aadf862bd776c8fc18b8e9f8e20089714856ee233b3902a591d0d5f2925");
+        let res = H256::try_from(val).unwrap();
+        let expected = H256::new([
+            102, 104, 122, 173, 248, 98, 189, 119, 108, 143, 193, 139, 142, 159, 142, 32, 8, 151,
+            20, 133, 110, 226, 51, 179, 144, 42, 89, 29, 13, 95, 41, 37,
+        ]);
+        assert_eq!(res, expected)
+    }
+
+    #[test]
+    fn test_from_string_too_short() {
+        let val = String::from("too short");
+        let val = encode(val);
+        let res = H256::try_from(val);
+        assert!(res.is_err())
+    }
+
+    #[test]
+    fn test_from_str_too_short() {
+        let val = "too short";
+        let val = encode(val);
+        let val = val.as_str();
+        let res = H256::try_from(val);
+        assert!(res.is_err())
+    }
+
+    #[test]
+    fn test_from_str() {
+        let val = "66687aadf862bd776c8fc18b8e9f8e20089714856ee233b3902a591d0d5f2925";
+        let res = H256::try_from(val).unwrap();
+        let expected = H256::new([
+            102, 104, 122, 173, 248, 98, 189, 119, 108, 143, 193, 139, 142, 159, 142, 32, 8, 151,
+            20, 133, 110, 226, 51, 179, 144, 42, 89, 29, 13, 95, 41, 37,
+        ]);
+        assert_eq!(res, expected)
+    }
+
+    #[test]
+    fn test_zero() {
+        let res = H256::zero();
+        let expected = H256::new([
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0,
+        ]);
+        assert_eq!(res, expected)
+    }
+}

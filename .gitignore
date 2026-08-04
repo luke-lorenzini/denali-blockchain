@@ -1,1 +1,3 @@
-/target
+target
+/plugins
+temp_db

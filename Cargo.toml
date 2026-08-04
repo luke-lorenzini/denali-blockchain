@@ -1,6 +1,45 @@
-[package]
-name = "denali"
-version = "0.1.0"
-edition = "2024"
+[workspace]
+resolver = "3"
+members = [
+    "denali",
+    # "example_contracts/bank", 
+    # "example_contracts/hello-world", 
+    "example_contracts/vote", 
+    "load-test", 
+    "macros"
+]
 
-[dependencies]
+[workspace.dependencies]
+anyhow = "1.0.98"
+async-trait = "0.1.88"
+axum = "0.8.4"
+borsh = { version = "1.5.7", features = ["derive"] }
+chrono = "0.4.41"
+clap = { version = "4.5.41", features = ["derive"] }
+dashmap = "6.1.0"
+console-subscriber = "0.4.1"
+derive_more = { version = "2.0.1", features = ["as_ref"] }
+directories-next = "2.0.0"
+futures = "0.3.31"
+glob = "0.3.2"
+goose = "0.18.0"
+hex = "0.4.3"
+libloading = "0.8.8"
+log = "0.4.27"
+notify = "8.0.0"
+quinn = "0.11.8"
+quinn-proto = "0.11.12"
+quote = "1.0.40"
+rcgen = "0.14.2"
+rocksdb = "0.23.0"
+rust_decimal = { version = "1.37.1", features = ["macros"] }
+rustls = { version = "0.23.29", features = ["ring"] }
+semver = "1.0.26"
+serde = { version = "1.0.219", features = ["derive", "rc"] }
+serde_json = "1.0.140"
+sha2 = "0.10.9"
+syn = "2.0.104"
+tempfile = "3.20.0"
+tokio = { version = "1.45.1", features = ["fs", "macros", "rt-multi-thread", "sync", "time", "tracing"] }
+tracing = "0.1.41"
+url = "2.5.4"
